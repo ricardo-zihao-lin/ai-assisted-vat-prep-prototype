@@ -1,0 +1,10 @@
+date,description,net_amount,vat_amount,category
+2026-01-03,Office supplies,120.50,24.10,Office
+2026-01-05,Client invoice,1500.00,300.00,Sales
+2026-01-07,Travel expense,89.99,18.00,Travel
+2026-13-01,Equipment purchase,750.00,150.00,Equipment
+2026-01-09,Large consulting income,45000.00,9000.00,Sales
+2026-01-05,Client invoice,1500.00,300.00,Sales
+2026-01-10,Software subscription,,12.00,Software
+2026-01-11,Cash sale,not_available,10.00,Sales
+2026-01-12,Refund,-250.00,-50.00,Adjustment
