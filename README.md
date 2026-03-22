@@ -64,6 +64,38 @@ Run:
 venv\Scripts\python.exe main.py
 ```
 
+### Option 3: Run the local browser UI
+
+Run:
+
+```bat
+venv\Scripts\python.exe gui.py
+```
+
+Then open the local address shown in the terminal, usually:
+
+```text
+http://127.0.0.1:7860
+```
+
+### Local UI scope note
+
+The browser-based UI is a local demonstration wrapper around the existing prototype pipeline.
+It does not change the system boundary: spreadsheet ingestion, deterministic validation,
+IQR-based anomaly flagging, review handling, and export generation all remain local operations.
+
+When the UI is used, each run writes outputs to a per-run folder under:
+
+```text
+output/ui_runs/
+```
+
+Each UI run still produces the same three core artefacts:
+
+- `dataset_snapshot.csv`
+- `issue_report.csv`
+- `review_log.csv`
+
 ### Install dependencies
 
 If you need to create or refresh the environment, install the dependencies with:
@@ -83,7 +115,19 @@ data/sample_data.csv
 The orchestration is currently defined in:
 
 ```text
+pipeline.py
+```
+
+The thin command-line demo entry point is:
+
+```text
 main.py
+```
+
+The local browser-based interface entry point is:
+
+```text
+gui.py
 ```
 
 ## Output Files
@@ -124,7 +168,9 @@ This keeps the prototype aligned with a human-in-the-loop workflow. Reported pro
 - `anomaly/anomaly_detector.py` - anomaly flagging
 - `review/review_manager.py` - review outcome recording
 - `export/exporter.py` - output artefact export
-- `main.py` - pipeline orchestration
+- `pipeline.py` - reusable pipeline orchestration
+- `main.py` - thin command-line demo entry point
+- `gui.py` - local Gradio interface wrapper
 
 ## Notes For Dissertation Alignment
 
