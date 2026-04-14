@@ -1,0 +1,58 @@
+name: Validate Docker Demo Image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/validate-docker-demo.yml"
+      - ".dockerignore"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "ai/**"
+      - "anomaly/**"
+      - "data/sample_data.csv"
+      - "explanation/**"
+      - "export/**"
+      - "gui.py"
+      - "ingestion/**"
+      - "main.py"
+      - "pipeline.py"
+      - "requirements.txt"
+      - "review/**"
+      - "validation/**"
+  pull_request:
+    paths:
+      - ".github/workflows/validate-docker-demo.yml"
+      - ".dockerignore"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "ai/**"
+      - "anomaly/**"
+      - "data/sample_data.csv"
+      - "explanation/**"
+      - "export/**"
+      - "gui.py"
+      - "ingestion/**"
+      - "main.py"
+      - "pipeline.py"
+      - "requirements.txt"
+      - "review/**"
+      - "validation/**"
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t vat-spreadsheet-demo:ci .
+
+      - name: Smoke test container startup
+        run: |
+          docker run -d --name vat-demo-ci -p 7860:7860 -e VAT_GUI_HOST=0.0.0.0 -e VAT_GUI_PORT=7860 -e VAT_GUI_OPEN_BROWSER=0 vat-spreadsheet-demo:ci
+          sleep 20
+          curl --fail http://127.0.0.1:7860/ > /dev/null
+          docker rm -f vat-demo-ci

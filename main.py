@@ -1,5 +1,8 @@
-"""Thin demo entry point for the VAT spreadsheet preparation prototype."""
+"""Thin source-run entry point for the VAT spreadsheet preparation prototype."""
 
+from __future__ import annotations
+
+import argparse
 import logging
 from pathlib import Path
 
@@ -8,19 +11,34 @@ from pipeline import run_pipeline
 LOGGER = logging.getLogger(__name__)
 
 
-def main() -> None:
-    """Run the sample dataset through the reusable prototype pipeline."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+def _build_parser(base_dir: Path) -> argparse.ArgumentParser:
+    """Create a small CLI for running the shared pipeline from source."""
+    parser = argparse.ArgumentParser(
+        description="Run the VAT spreadsheet preparation pipeline from a source checkout.",
     )
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=base_dir / "data" / "sample_data.csv",
+        help="Path to the CSV or Excel file to analyse.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=base_dir / "output",
+        help="Directory where the exported CSV artefacts should be written.",
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging verbosity for the source-run entry point.",
+    )
+    return parser
 
-    base_dir = Path(__file__).resolve().parent
-    input_path = base_dir / "data" / "sample_data.csv"
-    output_dir = base_dir / "output"
 
-    result = run_pipeline(str(input_path), str(output_dir))
-
+def _print_run_summary(result) -> None:
+    """Print a stable, human-readable summary for source runs."""
     print("VAT Spreadsheet Preparation Prototype")
     print(f"Input file: {result.input_file}")
     print(f"Rows loaded: {result.rows_loaded}")
@@ -40,5 +58,28 @@ def main() -> None:
     print(f"review_history: {result.review_history_path}")
 
 
+def main(argv: list[str] | None = None) -> int:
+    """Run the shared pipeline from source without adding deployment logic."""
+    base_dir = Path(__file__).resolve().parent
+    parser = _build_parser(base_dir)
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
+
+    input_path = args.input.resolve()
+    output_dir = args.output_dir.resolve()
+
+    if not input_path.exists():
+        parser.error(f"Input file does not exist: {input_path}")
+
+    LOGGER.info("Running source pipeline entry for %s", input_path)
+    result = run_pipeline(str(input_path), str(output_dir))
+    _print_run_summary(result)
+    return 0
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

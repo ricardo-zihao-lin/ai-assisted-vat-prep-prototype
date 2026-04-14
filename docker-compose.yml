@@ -1,0 +1,16 @@
+services:
+  vat-spreadsheet-demo:
+    build:
+      context: .
+    image: vat-spreadsheet-demo:local
+    ports:
+      - "${VAT_GUI_PUBLISHED_PORT:-7860}:7860"
+    environment:
+      VAT_GUI_HOST: 0.0.0.0
+      VAT_GUI_PORT: 7860
+      VAT_GUI_OPEN_BROWSER: "0"
+      VAT_GUI_MODE: "${VAT_GUI_MODE:-local}"
+      VAT_GUI_MAX_FILE_SIZE: "${VAT_GUI_MAX_FILE_SIZE:-}"
+      VAT_GUI_ENABLE_AI: "${VAT_GUI_ENABLE_AI:-1}"
+    volumes:
+      - ./output:/app/output

@@ -1,4 +1,8 @@
 venv/
+.venv-mac/
 __pycache__/
 *.pyc
 output/
+build/
+dist/
+_tmp_*/
