@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 import html
 import logging
+import os
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -35,6 +38,19 @@ from review.review_manager import (
 
 LOGGER = logging.getLogger(__name__)
 
+APP_MODE_LOCAL = "local"
+APP_MODE_PUBLIC_DEMO = "public_demo"
+DEFAULT_GUI_HOST = "127.0.0.1"
+DEFAULT_GUI_PORT = 7860
+DEFAULT_PUBLIC_DEMO_MAX_FILE_SIZE = "10mb"
+PUBLIC_DEMO_AI_DISABLED_MESSAGE = (
+    "AI suggestions are disabled in this public demo. The local automatic explanation is still available."
+)
+PUBLIC_DEMO_PRIVACY_NOTE = (
+    "Public demo mode uses the same local-first GUI shell, but it is intended for limited demonstration only. "
+    "Do not upload sensitive spreadsheets. Full source files are not sent to AI by default, and any optional AI path "
+    "continues to use a compact findings snapshot only."
+)
 STATUS_FILTER_OPTIONS = ["All statuses", "Pending", "Confirmed", "Rejected", "Ignored"]
 TYPE_FILTER_MAP = {
     "All finding types": None,
@@ -67,6 +83,24 @@ DASHBOARD_PRIORITY_COLUMNS = [
 ]
 
 
+@dataclass(frozen=True)
+class GuiLaunchOptions:
+    """Thin runtime configuration for launching the shared Gradio shell."""
+
+    host: str
+    port: int
+    open_browser: bool
+    share: bool
+    root_path: str | None
+    max_file_size: str | None
+    strict_cors: bool
+    app_mode: str
+    enable_ai_assistant: bool
+
+
+CURRENT_GUI_OPTIONS: GuiLaunchOptions | None = None
+
+
 def _get_runtime_root() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
@@ -75,6 +109,52 @@ def _get_runtime_root() -> Path:
 
 RUNTIME_ROOT = _get_runtime_root()
 UI_OUTPUT_ROOT = RUNTIME_ROOT / "output" / "ui_runs"
+
+
+def _normalise_app_mode(value: str | None) -> str:
+    """Keep launch profiles small and explicit."""
+    normalised = (value or APP_MODE_LOCAL).strip().lower().replace("-", "_")
+    if normalised not in {APP_MODE_LOCAL, APP_MODE_PUBLIC_DEMO}:
+        raise ValueError(f"Unsupported GUI mode: {value}")
+    return normalised
+
+
+def _parse_bool(value: str | None, default: bool) -> bool:
+    """Parse environment-style booleans conservatively."""
+    if value is None:
+        return default
+
+    normalised = value.strip().lower()
+    if normalised in {"1", "true", "yes", "on"}:
+        return True
+    if normalised in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def _parse_int(value: str | None, default: int) -> int:
+    """Parse integer launch settings conservatively."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+def _default_enable_ai_assistant(app_mode: str | None = None) -> bool:
+    """Keep AI enabled locally by default, but not for the public-demo profile."""
+    resolved_mode = app_mode or _normalise_app_mode(os.getenv("VAT_GUI_MODE"))
+    return resolved_mode != APP_MODE_PUBLIC_DEMO
+
+
+def _is_ai_assistant_enabled(override: bool | None = None) -> bool:
+    """Resolve AI availability from explicit overrides, launch settings, or environment."""
+    if override is not None:
+        return override
+    if CURRENT_GUI_OPTIONS is not None:
+        return CURRENT_GUI_OPTIONS.enable_ai_assistant
+    return _parse_bool(os.getenv("VAT_GUI_ENABLE_AI"), _default_enable_ai_assistant())
 
 
 def _read_output_csv(file_path: str | None, default_columns: list[str] | None = None) -> pd.DataFrame:
@@ -906,6 +986,7 @@ def run_analysis(
     uploaded_file,
     editable_explanation_prompt: str,
     advanced_instructions: str | None,
+    enable_ai_assistant: bool | None = None,
 ) -> tuple:
     if uploaded_file is None:
         raise gr.Error("Please upload a CSV or Excel file before running the analysis.")
@@ -934,11 +1015,14 @@ def run_analysis(
     else:
         explanation = generate_automatic_explanation(result, issue_report_df, review_log_df)
         ai_snapshot = build_issue_snapshot(result, issue_report_df, review_log_df)
-        ai_suggestions = try_generate_default_ai_suggestions(
-            ai_snapshot,
-            editable_explanation_prompt,
-            advanced_instructions,
-        )
+        if _is_ai_assistant_enabled(enable_ai_assistant):
+            ai_suggestions = try_generate_default_ai_suggestions(
+                ai_snapshot,
+                editable_explanation_prompt,
+                advanced_instructions,
+            )
+        else:
+            ai_suggestions = PUBLIC_DEMO_AI_DISABLED_MESSAGE
 
     review_paths = {
         "issue_report_path": result.issue_report_path,
@@ -1087,7 +1171,11 @@ def request_enhanced_ai_suggestions(
     api_key: str,
     editable_explanation_prompt: str,
     advanced_instructions: str | None,
+    enable_ai_assistant: bool | None = None,
 ) -> str:
+    if not _is_ai_assistant_enabled(enable_ai_assistant):
+        return PUBLIC_DEMO_AI_DISABLED_MESSAGE
+
     return generate_advanced_ai_suggestions(
         snapshot,
         provider,
@@ -1120,6 +1208,8 @@ def update_provider_configuration(provider: str):
 
 
 def build_interface() -> gr.Blocks:
+    app_mode = CURRENT_GUI_OPTIONS.app_mode if CURRENT_GUI_OPTIONS is not None else _normalise_app_mode(os.getenv("VAT_GUI_MODE"))
+    ai_enabled = _is_ai_assistant_enabled()
     custom_css = """
     .workspace-root { max-width: 1280px; margin: 0 auto; padding: 20px 0 36px; }
     .panel { background: rgba(20, 30, 48, 0.86); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 18px; padding: 18px; }
@@ -1184,22 +1274,33 @@ def build_interface() -> gr.Blocks:
         font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
     )
 
-    with gr.Blocks(title="VAT Spreadsheet Review Centre", css=custom_css, theme=theme) as demo:
+    with gr.Blocks(title="VAT Spreadsheet Review Centre") as demo:
         with gr.Column(elem_classes="workspace-root"):
-            gr.Markdown("# VAT Spreadsheet Review Centre")
+            heading = "# VAT Spreadsheet Review Centre"
+            if app_mode == APP_MODE_PUBLIC_DEMO:
+                heading += "\n\n_Limited public demo profile_"
+            gr.Markdown(heading)
 
             with gr.Tabs():
                 with gr.TabItem("Welcome"):
                     gr.Markdown(
-                        """
-                        This local-first prototype helps you analyse VAT-related spreadsheets, explain why records were flagged, and record a human review trail.
-
-                        **Workflow**
-                        1. Upload a CSV or Excel file.
-                        2. Run the analysis.
-                        3. Review flagged findings in the dual-pane Review Centre.
-                        4. Save decisions and export the review artefacts.
-                        """
+                        (
+                            "This local-first prototype helps you analyse VAT-related spreadsheets, explain why records were flagged, and record a human review trail.\n\n"
+                            "**Architecture**\n"
+                            "- Same Python core is reused by source run, local GUI, Docker, Windows package, and the web demo shell.\n"
+                            "- The browser GUI is the current main interaction entry.\n"
+                            "- Deployment shells stay thin so evaluation logic can continue changing separately.\n\n"
+                            "**Workflow**\n"
+                            "1. Upload a CSV or Excel file.\n"
+                            "2. Run the analysis.\n"
+                            "3. Review flagged findings in the dual-pane Review Centre.\n"
+                            "4. Save decisions and export the review artefacts.\n"
+                            + (
+                                f"\n**Public Demo Boundary**\n- {PUBLIC_DEMO_PRIVACY_NOTE}\n"
+                                if app_mode == APP_MODE_PUBLIC_DEMO
+                                else "\n**Current Default Shape**\n- Run locally from source or a local package for demonstrations and dissertation work.\n"
+                            )
+                        )
                     )
 
                 with gr.TabItem("Upload and Run"):
@@ -1252,8 +1353,12 @@ def build_interface() -> gr.Blocks:
                     anomaly_note_output = gr.Markdown()
 
                 with gr.TabItem("Smart Assistant"):
-                    ai_suggestions_output = gr.Markdown("Run an analysis first to see AI suggestions.")
-                    with gr.Accordion("Configure AI settings", open=False):
+                    ai_suggestions_output = gr.Markdown(
+                        "Run an analysis first to see AI suggestions." if ai_enabled else PUBLIC_DEMO_AI_DISABLED_MESSAGE
+                    )
+                    if app_mode == APP_MODE_PUBLIC_DEMO:
+                        gr.Markdown(PUBLIC_DEMO_PRIVACY_NOTE)
+                    with gr.Accordion("Configure AI settings" if ai_enabled else "AI settings (disabled in this profile)", open=False):
                         advanced_provider_input = gr.Dropdown(label="Provider", choices=get_provider_choices(), value=DEFAULT_PROVIDER)
                         advanced_model_input = gr.Dropdown(label="Model", choices=get_standard_model_options(DEFAULT_PROVIDER), value=get_default_model(DEFAULT_PROVIDER))
                         advanced_api_key_input = gr.Textbox(label="API key", type="password", placeholder="Enter your provider API key")
@@ -1390,12 +1495,128 @@ def build_interface() -> gr.Blocks:
             outputs=[ai_suggestions_output],
         )
 
+    setattr(demo, "_vat_launch_css", custom_css)
+    setattr(demo, "_vat_launch_theme", theme)
     return demo
 
 
-if __name__ == "__main__":
+def build_launch_options(argv: list[str] | None = None) -> GuiLaunchOptions:
+    """Build thin runtime settings for local, Docker, and public-demo launches."""
+    env_mode = _normalise_app_mode(os.getenv("VAT_GUI_MODE"))
+
+    parser = argparse.ArgumentParser(description="Launch the VAT Spreadsheet browser GUI.")
+    parser.add_argument(
+        "--mode",
+        choices=["local", "public-demo"],
+        default=env_mode.replace("_", "-"),
+        help="Launch profile: local or limited public-demo.",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("VAT_GUI_HOST"),
+        help="Server host. Defaults to 127.0.0.1 locally and 0.0.0.0 for public-demo when unset.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=_parse_int(os.getenv("VAT_GUI_PORT"), DEFAULT_GUI_PORT),
+        help="Server port for the Gradio UI.",
+    )
+    parser.add_argument(
+        "--root-path",
+        default=os.getenv("VAT_GUI_ROOT_PATH"),
+        help="Optional reverse-proxy root path.",
+    )
+    parser.add_argument(
+        "--max-file-size",
+        default=os.getenv("VAT_GUI_MAX_FILE_SIZE"),
+        help="Optional Gradio upload limit such as 10mb.",
+    )
+
+    browser_group = parser.add_mutually_exclusive_group()
+    browser_group.add_argument("--browser", dest="open_browser", action="store_true", help="Open a browser automatically.")
+    browser_group.add_argument("--no-browser", dest="open_browser", action="store_false", help="Do not open a browser automatically.")
+    parser.set_defaults(open_browser=None)
+
+    share_group = parser.add_mutually_exclusive_group()
+    share_group.add_argument("--share", dest="share", action="store_true", help="Enable Gradio share mode.")
+    share_group.add_argument("--no-share", dest="share", action="store_false", help="Disable Gradio share mode.")
+    parser.set_defaults(share=None)
+
+    cors_group = parser.add_mutually_exclusive_group()
+    cors_group.add_argument("--strict-cors", dest="strict_cors", action="store_true", help="Keep strict CORS enabled.")
+    cors_group.add_argument("--no-strict-cors", dest="strict_cors", action="store_false", help="Disable strict CORS when a proxy needs it.")
+    parser.set_defaults(strict_cors=None)
+
+    ai_group = parser.add_mutually_exclusive_group()
+    ai_group.add_argument("--enable-ai", dest="enable_ai_assistant", action="store_true", help="Enable optional AI controls.")
+    ai_group.add_argument("--disable-ai", dest="enable_ai_assistant", action="store_false", help="Disable optional AI controls.")
+    parser.set_defaults(enable_ai_assistant=None)
+
+    args = parser.parse_args(argv)
+    app_mode = _normalise_app_mode(args.mode)
+
+    default_host = DEFAULT_GUI_HOST if app_mode == APP_MODE_LOCAL else "0.0.0.0"
+    default_open_browser = app_mode == APP_MODE_LOCAL
+    default_max_file_size = None if app_mode == APP_MODE_LOCAL else DEFAULT_PUBLIC_DEMO_MAX_FILE_SIZE
+    default_enable_ai_assistant = _default_enable_ai_assistant(app_mode)
+
+    return GuiLaunchOptions(
+        host=args.host or default_host,
+        port=args.port,
+        open_browser=_parse_bool(os.getenv("VAT_GUI_OPEN_BROWSER"), default_open_browser) if args.open_browser is None else args.open_browser,
+        share=_parse_bool(os.getenv("VAT_GUI_SHARE"), False) if args.share is None else args.share,
+        root_path=args.root_path,
+        max_file_size=args.max_file_size or default_max_file_size,
+        strict_cors=_parse_bool(os.getenv("VAT_GUI_STRICT_CORS"), True) if args.strict_cors is None else args.strict_cors,
+        app_mode=app_mode,
+        enable_ai_assistant=(
+            _parse_bool(os.getenv("VAT_GUI_ENABLE_AI"), default_enable_ai_assistant)
+            if args.enable_ai_assistant is None
+            else args.enable_ai_assistant
+        ),
+    )
+
+
+def launch_interface(options: GuiLaunchOptions):
+    """Launch the existing GUI shell with deployment-specific runtime settings."""
+    global CURRENT_GUI_OPTIONS
+
+    CURRENT_GUI_OPTIONS = options
+    allowed_paths = [str(RUNTIME_ROOT), str(UI_OUTPUT_ROOT)]
+
+    LOGGER.info(
+        "Launching GUI mode=%s host=%s port=%s ai_enabled=%s",
+        options.app_mode,
+        options.host,
+        options.port,
+        options.enable_ai_assistant,
+    )
+    demo = build_interface()
+    return demo.launch(
+        inbrowser=options.open_browser,
+        share=options.share,
+        server_name=options.host,
+        server_port=options.port,
+        root_path=options.root_path,
+        max_file_size=options.max_file_size,
+        strict_cors=options.strict_cors,
+        allowed_paths=allowed_paths,
+        show_error=True,
+        css=getattr(demo, "_vat_launch_css", None),
+        theme=getattr(demo, "_vat_launch_theme", None),
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for the shared browser GUI shell."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
-    build_interface().launch(inbrowser=True)
+    launch_interface(build_launch_options(argv))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,10 @@
+.git
+.github
+venv
+.venv-mac
+__pycache__
+*.pyc
+build
+dist
+output
+_tmp_*

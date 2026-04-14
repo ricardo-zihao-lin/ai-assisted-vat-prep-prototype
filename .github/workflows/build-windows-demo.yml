@@ -1,0 +1,72 @@
+name: Build Windows Demo Package
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/build-windows-demo.yml"
+      - "ai/**"
+      - "anomaly/**"
+      - "data/sample_data.csv"
+      - "explanation/**"
+      - "export/**"
+      - "gui.py"
+      - "ingestion/**"
+      - "main.py"
+      - "pipeline.py"
+      - "requirements.txt"
+      - "review/**"
+      - "build_demo.ps1"
+      - "vat_spreadsheet_demo.spec"
+      - "README_RUN_FIRST.txt"
+      - "validation/**"
+  pull_request:
+    paths:
+      - ".github/workflows/build-windows-demo.yml"
+      - "ai/**"
+      - "anomaly/**"
+      - "data/sample_data.csv"
+      - "explanation/**"
+      - "export/**"
+      - "gui.py"
+      - "ingestion/**"
+      - "main.py"
+      - "pipeline.py"
+      - "requirements.txt"
+      - "review/**"
+      - "build_demo.ps1"
+      - "vat_spreadsheet_demo.spec"
+      - "README_RUN_FIRST.txt"
+      - "validation/**"
+
+jobs:
+  build-windows-demo:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install runtime and packaging dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build Windows demo package
+        shell: pwsh
+        run: .\build_demo.ps1 -PythonExe python
+
+      - name: Upload Windows demo artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vat-spreadsheet-demo-windows
+          path: |
+            dist/VAT_Spreadsheet_Demo
+            dist/VAT_Spreadsheet_Demo_windows_x64.zip
+          if-no-files-found: error
+          retention-days: 14
