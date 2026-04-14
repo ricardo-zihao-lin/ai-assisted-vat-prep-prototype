@@ -24,14 +24,20 @@ def main() -> None:
     print("VAT Spreadsheet Preparation Prototype")
     print(f"Input file: {result.input_file}")
     print(f"Rows loaded: {result.rows_loaded}")
+    print(f"Preparation status: {result.preparation_status}")
+    print(f"Preparation note: {result.preparation_message}")
     print(f"Issues found: {result.issues_found}")
     print(f"Anomalies flagged: {result.anomalies_flagged}")
     print(f"Status: {result.status}")
     if result.stop_reason:
         print(f"Stop reason: {result.stop_reason}")
+    if result.missing_required_fields:
+        print(f"Missing required fields: {', '.join(result.missing_required_fields)}")
     print(f"dataset_snapshot: {result.dataset_snapshot_path}")
+    print(f"prepared_canonical_records: {result.prepared_canonical_records_path}")
     print(f"issue_report: {result.issue_report_path}")
     print(f"review_log: {result.review_log_path}")
+    print(f"review_history: {result.review_history_path}")
 
 
 if __name__ == "__main__":

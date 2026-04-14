@@ -1,98 +1,141 @@
-"""Simulation of human review decisions for flagged VAT record issues.
+"""Helpers for user-driven review decisions and review history."""
 
-The prototype includes a lightweight review stage to emphasise that analytical
-flags should be interpreted by a person before any downstream action is taken.
-This module records simple confirm, reject, or ignore decisions to illustrate
-that human oversight remains central to the workflow.
-"""
+from __future__ import annotations
 
-import logging
+from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
-LOGGER = logging.getLogger(__name__)
-REVIEW_LOG_COLUMNS = ["row_index", "issue_type", "decision", "notes"]
+REVIEW_DECISION_OPTIONS = ["pending", "confirm", "reject", "ignore"]
+REVIEW_LOG_COLUMNS = ["finding_id", "row_index", "issue_type", "decision", "notes", "saved_at"]
+REVIEW_HISTORY_COLUMNS = ["finding_id", "row_index", "issue_type", "decision", "notes", "saved_at"]
+REVIEW_QUEUE_COLUMNS = [
+    "finding_id",
+    "finding_summary",
+    "row_index",
+    "issue_type",
+    "column",
+    "value",
+    "decision",
+    "notes",
+    "trigger_reason",
+    "trigger_rule",
+    "fields_to_check",
+    "suggested_action",
+    "review_note",
+    "date",
+    "description",
+    "net_amount",
+    "vat_amount",
+    "category",
+]
+
+EMPTY_REVIEW_LOG = pd.DataFrame(columns=REVIEW_LOG_COLUMNS)
+EMPTY_REVIEW_HISTORY = pd.DataFrame(columns=REVIEW_HISTORY_COLUMNS)
 
 
-class ReviewManager:
-    """Manage the prototype's simulated human review process.
+def _normalise_decision(value: object) -> str:
+    decision = str(value or "").strip().lower()
+    if decision not in REVIEW_DECISION_OPTIONS:
+        return "pending"
+    return decision
 
-    Notes
-    -----
-        The current implementation uses simple deterministic rules to mimic how a
-        reviewer might respond to validation findings and anomalies. This keeps
-        the demonstration reproducible while preserving the concept of explicit
-        human judgement within the system design.
-        """
 
-    @staticmethod
-    def _decide_outcome(item: dict) -> tuple[str, str]:
-        """Return a simple prototype review outcome and supporting note.
+def _normalise_notes(value: object) -> str:
+    if value is None or pd.isna(value):
+        return ""
+    return str(value).strip()
 
-        The rules are intentionally small and transparent:
-        invalid or missing values are rejected, duplicate rows are ignored, and
-        anomalies are confirmed only when their score is high enough to merit
-        escalation.
-        """
-        issue_type = item.get("issue_type", "anomaly")
-        score = item.get("anomaly_score", 0)
 
-        if issue_type in {"missing_value", "invalid_date_format", "invalid_numeric_format", "missing_column"}:
-            return "reject", "Record requires source spreadsheet correction."
+def build_review_queue(issue_report_df: pd.DataFrame, review_log_df: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Return a review queue joined with the latest saved decisions."""
+    if issue_report_df.empty:
+        return pd.DataFrame(columns=REVIEW_QUEUE_COLUMNS)
 
-        if issue_type == "duplicate_row":
-            return "ignore", "Potential duplicate noted for user review."
+    queue_df = issue_report_df.copy()
+    queue_df["value"] = queue_df.get("value")
+    if "observed_value" in queue_df.columns:
+        queue_df["value"] = queue_df["value"].where(queue_df["value"].notna(), queue_df["observed_value"])
 
-        if issue_type == "anomaly":
-            if score > 100:
-                return "confirm", "Suspicious transaction retained for follow-up."
-            return "ignore", "Low-severity anomaly not escalated."
+    queue_df["decision"] = "pending"
+    queue_df["notes"] = ""
 
-        return "confirm", "Flag confirmed during prototype review."
+    if review_log_df is not None and not review_log_df.empty and "finding_id" in review_log_df.columns:
+        latest_review = review_log_df.copy()
+        latest_review["decision"] = latest_review["decision"].map(_normalise_decision)
+        latest_review["notes"] = latest_review["notes"].map(_normalise_notes)
+        latest_review = latest_review.drop_duplicates(subset=["finding_id"], keep="last")
+        queue_df = queue_df.merge(
+            latest_review[["finding_id", "decision", "notes"]],
+            on="finding_id",
+            how="left",
+            suffixes=("", "_saved"),
+        )
+        queue_df["decision"] = queue_df["decision_saved"].where(queue_df["decision_saved"].notna(), queue_df["decision"])
+        queue_df["notes"] = queue_df["notes_saved"].where(queue_df["notes_saved"].notna(), queue_df["notes"])
+        queue_df = queue_df.drop(columns=["decision_saved", "notes_saved"])
 
-    def review_issues(self, review_items: list[dict]) -> pd.DataFrame:
-        """Generate a review log for flagged validation and anomaly items.
+    queue_df["decision"] = queue_df["decision"].map(_normalise_decision)
+    queue_df["notes"] = queue_df["notes"].map(_normalise_notes)
+    return queue_df.reindex(columns=REVIEW_QUEUE_COLUMNS)
 
-        Parameters
-        ----------
-        review_items : list of dict
-            Combined list of issue records and anomaly records produced by
-            earlier pipeline stages.
 
-        Returns
-        -------
-        pandas.DataFrame
-            Tabular log of review decisions, including the row index, issue
-            type, simulated decision, and supporting note.
+def persist_review_outputs(
+    review_queue_df: pd.DataFrame,
+    review_log_path: str | Path,
+    review_history_path: str | Path,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Persist the latest review log and append changed entries to history."""
+    current_log_df = review_queue_df.reindex(columns=["finding_id", "row_index", "issue_type", "decision", "notes"]).copy()
+    current_log_df["decision"] = current_log_df["decision"].map(_normalise_decision)
+    current_log_df["notes"] = current_log_df["notes"].map(_normalise_notes)
+    current_log_df["saved_at"] = datetime.now().isoformat(timespec="seconds")
 
-        Notes
-        -----
-        The prototype records one of three outcomes for each reviewed item:
-        ``confirm``, ``reject``, or ``ignore``. The purpose is to demonstrate
-        the review workflow rather than prescribe real assurance practice.
-        """
-        LOGGER.info("Simulating human review decisions")
-        decisions = []
+    review_log_file = Path(review_log_path)
+    review_history_file = Path(review_history_path)
 
-        for item in review_items:
-            issue_type = item.get("issue_type", "anomaly")
-            decision, review_note = self._decide_outcome(item)
-            LOGGER.debug(
-                "Reviewed item for row %s with issue type %s -> %s",
-                item.get("row_index"),
-                issue_type,
-                decision,
-            )
+    if review_log_file.exists():
+        try:
+            previous_log_df = pd.read_csv(review_log_file)
+        except pd.errors.EmptyDataError:
+            previous_log_df = EMPTY_REVIEW_LOG.copy()
+    else:
+        previous_log_df = EMPTY_REVIEW_LOG.copy()
 
-            decisions.append(
-                {
-                    "row_index": item.get("row_index"),
-                    "issue_type": issue_type,
-                    "decision": decision,
-                    "notes": item.get("message") or item.get("reason") or review_note,
-                }
-            )
+    previous_log_df = previous_log_df.reindex(columns=REVIEW_LOG_COLUMNS)
 
-        review_log = pd.DataFrame(decisions, columns=REVIEW_LOG_COLUMNS)
-        LOGGER.info("Review simulation recorded %s decisions", len(review_log))
-        return review_log
+    if review_history_file.exists():
+        try:
+            review_history_df = pd.read_csv(review_history_file)
+        except pd.errors.EmptyDataError:
+            review_history_df = EMPTY_REVIEW_HISTORY.copy()
+    else:
+        review_history_df = EMPTY_REVIEW_HISTORY.copy()
+
+    review_history_df = review_history_df.reindex(columns=REVIEW_HISTORY_COLUMNS)
+
+    changed_entries: list[dict] = []
+    previous_lookup = previous_log_df.set_index("finding_id").to_dict(orient="index") if not previous_log_df.empty else {}
+
+    for row in current_log_df.to_dict(orient="records"):
+        previous_row = previous_lookup.get(row["finding_id"])
+        if previous_row is None:
+            if row["decision"] != "pending" or row["notes"]:
+                changed_entries.append(row)
+            continue
+
+        previous_decision = _normalise_decision(previous_row.get("decision"))
+        previous_notes = _normalise_notes(previous_row.get("notes"))
+        if row["decision"] != previous_decision or row["notes"] != previous_notes:
+            changed_entries.append(row)
+
+    if changed_entries:
+        review_history_df = pd.concat(
+            [review_history_df, pd.DataFrame(changed_entries, columns=REVIEW_HISTORY_COLUMNS)],
+            ignore_index=True,
+        )
+
+    current_log_df.to_csv(review_log_file, index=False)
+    review_history_df.to_csv(review_history_file, index=False)
+    return current_log_df, review_history_df

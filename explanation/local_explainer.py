@@ -47,9 +47,11 @@ def _format_issue_list(counts: Counter) -> str:
     return f"{parts[0]}, {parts[1]}, and {parts[2]}"
 
 
-def _build_review_note(review_log_df: pd.DataFrame) -> str:
+def _build_review_note(review_log_df: pd.DataFrame, has_findings: bool) -> str:
     """Summarise review outcomes without exposing internal decision labels."""
     if review_log_df.empty or "decision" not in review_log_df.columns:
+        if has_findings:
+            return "Review decisions have not been recorded yet."
         return "No review follow-up was needed."
 
     decision_counts = Counter(review_log_df["decision"].dropna().astype(str))
@@ -78,7 +80,7 @@ def _build_main_findings(run_result: RunResult, issue_report_df: pd.DataFrame, r
 
     issue_counts = Counter(issue_report_df.get("issue_type", pd.Series(dtype="object")).dropna().astype(str))
     dominant_findings = _format_issue_list(issue_counts)
-    review_note = _build_review_note(review_log_df)
+    review_note = _build_review_note(review_log_df, has_findings=True)
 
     if len(issue_counts) == 1:
         return f"The main finding was {dominant_findings}. {review_note}"
@@ -121,7 +123,7 @@ def generate_automatic_explanation(
     """Generate a fully local plain-language explanation for a pipeline run."""
     if run_result.status == STATUS_STOPPED_AFTER_REPORTING:
         overall_result = (
-            "Reports were created, and some records need further attention before the spreadsheet is reviewed again."
+            "Reports were created, and the flagged records are ready for user review."
         )
     elif run_result.status == STATUS_COMPLETED and run_result.issues_found == 0 and run_result.anomalies_flagged == 0:
         overall_result = (
@@ -134,8 +136,8 @@ def generate_automatic_explanation(
 
     if run_result.status == STATUS_STOPPED_AFTER_REPORTING:
         what_this_means = (
-            "The source spreadsheet is likely to need some checking before it is run again. "
-            "The exported files show what was found and how it was reviewed."
+            "The source spreadsheet has findings that should now be reviewed by a user. "
+            "The exported files show what was found, why it was flagged, and where review decisions should be recorded."
         )
     elif run_result.issues_found == 0 and run_result.anomalies_flagged == 0:
         what_this_means = (

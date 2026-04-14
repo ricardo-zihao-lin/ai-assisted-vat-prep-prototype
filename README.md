@@ -13,6 +13,8 @@ The current prototype already includes:
 - a reusable high-level pipeline entry point via `run_pipeline(input_path, output_dir)`
 - a thin command-line demo entry point in `main.py`
 - a local Gradio browser UI in `gui.py`
+- a dual-pane Review Centre for user-driven finding review and decision logging
+- an operations-style Visual Insights dashboard with KPI cards, analysis charts, and a priority findings table
 - a local Automatic Explanation layer that works without AI or internet access
 - an optional AI Suggestions layer built on a compact findings snapshot
 - offline fallback when no AI provider is configured or a provider is unavailable
@@ -25,10 +27,12 @@ The current prototype already includes:
 - deterministic validation checks for missing values, duplicate rows, invalid date formats, and invalid numeric formats
 - IQR-based anomaly flagging on `net_amount`
 - review-oriented handling of validation issues and anomaly findings
+- a user-driven review workflow with per-finding decisions, reviewer notes, and saved review history
 - traceable export outputs:
   - `dataset_snapshot.csv`
   - `issue_report.csv`
   - `review_log.csv`
+  - `review_history.csv`
 - reusable orchestration through `pipeline.py`
 - local browser-based demonstration UI through Gradio
 - local plain-language explanation generation after each run
@@ -40,7 +44,7 @@ The current prototype already includes:
 - validates the prepared VAT-style dataset against a small expected schema
 - flags unusual `net_amount` values using an IQR-based rule
 - combines validation findings and anomaly findings into a review worklist
-- records review outcomes
+- supports a user-recorded review decision trail with notes and history
 - exports CSV artefacts for traceability and later inspection
 - supports local demonstration through both command-line and browser-based entry points
 
@@ -98,11 +102,12 @@ The page is organised around:
 
 1. upload and run analysis
 2. results overview
-3. automatic explanation
-4. AI suggestions
-5. visual findings
-6. download outputs
-7. detailed findings preview
+3. dual-pane Review Centre
+4. Visual Insights dashboard
+5. automatic explanation
+6. AI suggestions
+7. download outputs
+8. detailed findings preview
 
 When the UI is used, each run writes outputs to a per-run folder under:
 
@@ -110,11 +115,25 @@ When the UI is used, each run writes outputs to a per-run folder under:
 output/ui_runs/
 ```
 
-Each UI run still produces the same three core artefacts:
+Each UI run produces the following review artefacts:
 
 - `dataset_snapshot.csv`
+- `prepared_canonical_records.csv`
 - `issue_report.csv`
 - `review_log.csv`
+- `review_history.csv`
+
+The Review Centre is designed as a left-to-right review workstation:
+
+- the left pane helps the user filter, search, and select findings from the review queue
+- the right pane shows the selected finding, a row preview, explanation cards, current record context, and decision controls
+- each saved decision updates both the current `review_log.csv` and the append-only `review_history.csv`
+
+The Visual Insights tab is designed as a lightweight management dashboard:
+
+- the top section shows KPI cards for rows loaded, findings, pending review work, reviewed items, duplicate rows, and unusual amounts
+- the middle section shows chart-based summaries for finding types, review status, field-level review pressure, and the most unusual amounts
+- the lower section highlights the next findings that should be reviewed first through a priority table and anomaly summary note
 
 The UI is intended for local demonstration and prototype evaluation rather than remote deployment.
 
@@ -201,19 +220,23 @@ The prototype exports persistent CSV artefacts to the requested output directory
 output/
 ```
 
-The three core export files are:
+The main export files are:
 
 - `dataset_snapshot.csv`
+- `prepared_canonical_records.csv`
 - `issue_report.csv`
 - `review_log.csv`
+- `review_history.csv`
 
 Output meaning:
 
 - `dataset_snapshot.csv`: a traceable snapshot of the dataset loaded for that run; it should not be interpreted as a corrected spreadsheet
-- `issue_report.csv`: deterministic validation findings plus anomaly flags for review
-- `review_log.csv`: review outcomes associated with the flagged items
+- `prepared_canonical_records.csv`: the prepared records table used by the validation and anomaly stages
+- `issue_report.csv`: deterministic validation findings plus anomaly flags, with trigger reason, rule, suggested action, and contextual review fields
+- `review_log.csv`: the latest saved decision state for each finding in the current run
+- `review_history.csv`: the saved history of review changes for that run
 
-If follow-up items remain after review, the reporting artefacts are still exported and the run returns a stop-after-reporting status internally. This preserves the review-oriented prototype workflow without automatically correcting the source spreadsheet.
+If follow-up items remain, the reporting artefacts are still exported and the run returns a review-needed status internally. This preserves the review-oriented prototype workflow without automatically correcting the source spreadsheet or auto-finalising the review decisions.
 
 ## Project Structure
 
@@ -224,7 +247,7 @@ If follow-up items remain after review, the reporting artefacts are still export
 - `export/exporter.py` - export generation
 - `pipeline.py` - reusable pipeline orchestration
 - `main.py` - thin command-line demo entry point
-- `gui.py` - local Gradio UI
+- `gui.py` - local Gradio UI with dual-pane Review Centre
 - `explanation/local_explainer.py` - local Automatic Explanation layer
 - `ai/snapshot_builder.py` - compact findings snapshot construction
 - `ai/suggestions_service.py` - optional AI Suggestions service logic
@@ -239,6 +262,7 @@ This repository should be described as a conservative local research prototype f
 - transparent deterministic checks
 - simple statistical anomaly flagging
 - explicit human review handling
+- user-recorded review decisions with traceable history
 - traceable export artefacts
 - comparison between local explanation and optional AI-assisted interpretation
 
