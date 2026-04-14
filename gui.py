@@ -527,9 +527,9 @@ def _build_visual_summary_html(
     <div class="dashboard-shell">
       <div class="dashboard-title-row">
         <div class="dashboard-title-group">
-          <div class="eyebrow">{_icon_svg("insight")}Visual Insights</div>
-          <div class="dashboard-title">Operations-style review dashboard</div>
-          <div class="dashboard-subtitle">This view surfaces the headline workload, where findings cluster, and which records should be reviewed first.</div>
+          <div class="dashboard-section-kicker">Overview</div>
+          <div class="dashboard-title">Review workload snapshot</div>
+          <div class="dashboard-subtitle">Use this section to understand run size, current backlog, and the main categories driving review effort.</div>
         </div>
       </div>
       <div class="dashboard-kpi-grid">{cards_html}</div>
@@ -539,7 +539,7 @@ def _build_visual_summary_html(
 
 def _build_visual_highlights_html(issue_report_df: pd.DataFrame, review_queue_df: pd.DataFrame, review_history_df: pd.DataFrame) -> str:
     if issue_report_df.empty and review_queue_df.empty:
-        return '<div class="insight-grid"><div class="insight-card"><div class="insight-title">Dashboard highlights</div><div class="insight-body">No run is loaded yet.</div></div></div>'
+        return '<div class="insight-shell"><div class="insight-shell-header"><div class="dashboard-section-kicker">Focus Areas</div><div class="insight-shell-title">What this run needs</div></div><div class="insight-grid"><div class="insight-card insight-card-focus"><div class="insight-title">No run loaded</div><div class="insight-body">Run an analysis to surface focused review guidance.</div></div></div></div>'
 
     issue_counts = issue_report_df["issue_type"].dropna().astype(str).value_counts() if "issue_type" in issue_report_df.columns else pd.Series(dtype=int)
     top_issue = issue_counts.index[0] if not issue_counts.empty else "no finding types"
@@ -585,14 +585,25 @@ def _build_visual_highlights_html(issue_report_df: pd.DataFrame, review_queue_df
     ]
     card_html = "".join(
         f"""
-        <div class="insight-card">
+        <div class="insight-card {'insight-card-focus' if index < 2 else 'insight-card-status'}">
           <div class="insight-title">{_icon_svg(icon)}<span>{title}</span></div>
           <div class="insight-body">{html.escape(body)}</div>
         </div>
         """
-        for icon, title, body in cards
+        for index, (icon, title, body) in enumerate(cards)
     )
-    return f'<div class="insight-grid">{card_html}</div>'
+    return f"""
+    <div class="insight-shell">
+      <div class="insight-shell-header">
+        <div>
+          <div class="dashboard-section-kicker">Focus Areas</div>
+          <div class="insight-shell-title">Where to focus next</div>
+        </div>
+        <div class="insight-shell-copy">These cues separate risk concentration from workflow status so the page reads less like one repeated block of cards.</div>
+      </div>
+      <div class="insight-grid">{card_html}</div>
+    </div>
+    """
 
 
 def _build_priority_findings_preview(issue_report_df: pd.DataFrame, review_queue_df: pd.DataFrame) -> pd.DataFrame:
@@ -832,14 +843,14 @@ def _build_summary_html(review_queue_df: pd.DataFrame, review_history_df: pd.Dat
         ("Ignored", int(counts.get("ignore", 0)), "metric-ignore"),
     ]
     metric_html = "".join(
-        f'<div class="metric-card {css_class}"><div class="metric-value">{value}</div><div class="metric-label">{label}</div></div>'
+        f'<div class="metric-chip {css_class}"><div class="metric-chip-value">{value}</div><div class="metric-chip-label">{label}</div></div>'
         for label, value, css_class in metrics
     )
     footer = f'<div class="summary-footnote">Last saved change: {html.escape(last_saved)}</div>' if last_saved else ""
     return f"""
-    <div class="summary-card">
+    <div class="summary-card summary-inline-card">
       <div class="summary-title"><span class="title-with-icon">{_icon_svg("queue")}<span>Queue Summary</span></span></div>
-      <div class="metric-grid">{metric_html}</div>
+      <div class="metric-strip">{metric_html}</div>
       {footer}
     </div>
     """
@@ -854,62 +865,52 @@ def _build_filter_hint_html(filtered_df: pd.DataFrame, total_df: pd.DataFrame, s
 
 def _build_explanation_html(selected_row: pd.Series | None) -> str:
     if selected_row is None:
-        return f"""
-        <div class="detail-grid">
-          <div class="detail-card"><div class="detail-title"><span class="title-with-icon">{_icon_svg("insight")}<span>Explanation</span></span></div><div class="detail-body">Select a finding to inspect its explanation.</div></div>
-        </div>
-        """
+        return '<div class="context-empty">Select a finding to inspect the supporting explanation.</div>'
 
     cards = [
         ("reason", "Trigger Reason", selected_row.get("trigger_reason")),
         ("rule", "Rule Used", selected_row.get("trigger_rule")),
         ("check", "What To Check", selected_row.get("fields_to_check")),
-        ("action", "Suggested Action", selected_row.get("suggested_action")),
         ("interpret", "Interpretation", selected_row.get("review_note")),
     ]
     card_html = "".join(
         f"""
-        <div class="detail-card">
+        <div class="reference-detail-card">
           <div class="detail-title"><span class="title-with-icon">{_icon_svg(icon_name)}<span>{title}</span></span></div>
           <div class="detail-body">{_html_escape(value)}</div>
         </div>
         """
         for icon_name, title, value in cards
     )
-    return f'<div class="detail-grid">{card_html}</div>'
+    return f'<div class="detail-grid reference-grid">{card_html}</div>'
 
 
 def _build_record_context_html(selected_row: pd.Series | None) -> str:
     if selected_row is None:
-        return f'<div class="context-card"><div class="context-title"><span class="title-with-icon">{_icon_svg("context")}<span>Current record context</span></span></div><div class="context-empty">No source record is selected.</div></div>'
+        return '<div class="context-empty">No source record is selected.</div>'
 
     rows = "".join(
         f"<tr><th>{column.replace('_', ' ').title()}</th><td>{_html_escape(selected_row.get(column))}</td></tr>"
         for column in REVIEW_CONTEXT_COLUMNS
     )
-    return f"""
-    <div class="context-card">
-      <div class="context-title"><span class="title-with-icon">{_icon_svg("context")}<span>Current record context</span></span></div>
-      <table class="context-table">{rows}</table>
-    </div>
-    """
+    return f'<table class="context-table">{rows}</table>'
 
 
 def _build_row_preview_html(selected_row: pd.Series | None, prepared_records_path: str | None) -> str:
     if selected_row is None or not prepared_records_path:
-        return f'<div class="row-preview-card"><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">Run an analysis and select a finding to preview the relevant row.</div></div>'
+        return f'<div class="row-preview-card"><div class="eyebrow">Evidence</div><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">Run an analysis and select a finding to preview the relevant row.</div></div>'
 
     prepared_df = _read_output_csv(prepared_records_path, default_columns=REVIEW_CONTEXT_COLUMNS)
     if prepared_df.empty:
-        return f'<div class="row-preview-card"><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">Prepared records are not available for preview.</div></div>'
+        return f'<div class="row-preview-card"><div class="eyebrow">Evidence</div><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">Prepared records are not available for preview.</div></div>'
 
     row_index = pd.to_numeric(pd.Series([selected_row.get("row_index")]), errors="coerce").iloc[0]
     if pd.isna(row_index):
-        return f'<div class="row-preview-card"><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">This finding is not tied to a single row.</div></div>'
+        return f'<div class="row-preview-card"><div class="eyebrow">Evidence</div><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">This finding is not tied to a single row.</div></div>'
 
     row_index = int(row_index)
     if row_index < 0 or row_index >= len(prepared_df):
-        return f'<div class="row-preview-card"><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">The selected row could not be located in the prepared records.</div></div>'
+        return f'<div class="row-preview-card"><div class="eyebrow">Evidence</div><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">The selected row could not be located in the prepared records.</div></div>'
 
     issue_type = str(selected_row.get("issue_type") or "")
     if issue_type == "duplicate_row":
@@ -927,6 +928,9 @@ def _build_row_preview_html(selected_row: pd.Series | None, prepared_records_pat
     flagged_field = str(selected_row.get("column") or selected_row.get("checked_column") or "").strip()
     header_html = "".join(f"<th>{html.escape(column)}</th>" for column in preview_df.columns)
     body_rows: list[str] = []
+    decision_label, decision_class = _status_badge(str(selected_row.get("decision") or "pending"))
+    kind_label, kind_class = _finding_kind_badge(str(selected_row.get("issue_type") or ""))
+    suggested_action = _html_escape(selected_row.get("suggested_action"))
     for _, row in preview_df.iterrows():
         row_class = "current-row" if int(row["row_index"]) == row_index else ""
         cells: list[str] = []
@@ -939,13 +943,29 @@ def _build_row_preview_html(selected_row: pd.Series | None, prepared_records_pat
 
     return f"""
     <div class="row-preview-card">
+      <div class="eyebrow">Evidence</div>
+      <div class="evidence-summary">
+        <div class="evidence-summary-main">
+          <div class="evidence-summary-title">{_html_escape(selected_row.get('finding_id'))} - Row {_html_escape(selected_row.get('row_index'))}</div>
+          <div class="evidence-summary-subtitle">{_html_escape(selected_row.get('finding_summary'))}</div>
+        </div>
+        <div class="hero-badges">
+          <span class="badge {decision_class}">{decision_label}</span>
+          <span class="badge {kind_class}">{kind_label}</span>
+        </div>
+      </div>
       <div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div>
       <div class="row-preview-helper">{helper}</div>
-      <div class="row-preview-table-wrap">
+      <div class="row-preview-table-wrap excel-sheet-wrap">
         <table class="row-preview-table">
           <thead><tr>{header_html}</tr></thead>
           <tbody>{''.join(body_rows)}</tbody>
         </table>
+      </div>
+      <div class="evidence-action">
+        <div class="eyebrow">Next step</div>
+        <div class="action-title"><span class="title-with-icon">{_icon_svg("action")}<span>Suggested Action</span></span></div>
+        <div class="action-body">{suggested_action}</div>
       </div>
     </div>
     """
@@ -973,8 +993,8 @@ def _build_review_workspace(
         _build_queue_preview(filtered_df),
         _build_header_html(selected_row, len(filtered_df), len(review_queue_df)),
         _build_row_preview_html(selected_row, review_paths.get("prepared_records_path")),
-        _build_explanation_html(selected_row),
         _build_record_context_html(selected_row),
+        _build_explanation_html(selected_row),
         decision_value,
         notes_value,
         _build_summary_html(review_queue_df, review_history_df),
@@ -1211,9 +1231,9 @@ def build_interface() -> gr.Blocks:
     app_mode = CURRENT_GUI_OPTIONS.app_mode if CURRENT_GUI_OPTIONS is not None else _normalise_app_mode(os.getenv("VAT_GUI_MODE"))
     ai_enabled = _is_ai_assistant_enabled()
     custom_css = """
-    .workspace-root { max-width: 1280px; margin: 0 auto; padding: 20px 0 36px; }
-    .panel { background: rgba(20, 30, 48, 0.86); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 18px; padding: 18px; }
-    .hero-card, .summary-card, .row-preview-card, .context-card, .dashboard-shell { background: rgba(32, 45, 68, 0.92); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; padding: 18px; }
+    .workspace-root { max-width: 1480px; margin: 0 auto; padding: 20px 0 36px; }
+    .panel { background: rgba(20, 30, 48, 0.9); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 18px; padding: 18px; box-shadow: 10px 10px 24px rgba(5, 10, 22, 0.32), -6px -6px 18px rgba(255, 255, 255, 0.03); }
+    .hero-card, .summary-card, .row-preview-card, .context-card, .dashboard-shell, .action-card, .reference-card { background: rgba(32, 45, 68, 0.94); border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 18px; padding: 18px; box-shadow: 8px 8px 20px rgba(5, 10, 22, 0.26), -4px -4px 14px rgba(255, 255, 255, 0.025); }
     .hero-title { font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
     .hero-subtitle { margin-top: 8px; font-size: 1rem; color: #dbe6ff; }
     .eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: .72rem; color: #9fb2d1; margin-bottom: 8px; }
@@ -1228,41 +1248,113 @@ def build_interface() -> gr.Blocks:
     .badge-anomaly { background: rgba(245, 158, 11, 0.16); color: #fde68a; }
     .badge-data { background: rgba(244, 114, 182, 0.14); color: #fbcfe8; }
     .badge-neutral { background: rgba(148, 163, 184, 0.16); color: #e2e8f0; }
-    .summary-title, .row-preview-title, .context-title { font-size: 1.02rem; font-weight: 700; margin-bottom: 12px; }
+    .summary-title, .row-preview-title, .context-title, .action-title, .reference-title { font-size: 1.02rem; font-weight: 700; margin-bottom: 12px; }
     .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .metric-card { border-radius: 14px; padding: 12px; border: 1px solid rgba(148, 163, 184, 0.12); background: rgba(15, 23, 42, 0.46); }
-    .metric-value { font-size: 1.35rem; font-weight: 700; }
-    .metric-label { margin-top: 4px; font-size: .88rem; color: #b8c3d8; }
-    .summary-footnote, .filter-hint, .row-preview-helper, .context-empty, .row-preview-empty { margin-top: 12px; color: #b8c3d8; font-size: .9rem; }
+    .summary-inline-card { padding: 14px 16px; }
+    .metric-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .metric-chip { border-radius: 14px; padding: 10px 10px; border: 1px solid rgba(148, 163, 184, 0.14); background: rgba(15, 23, 42, 0.48); min-height: 64px; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.03); }
+    .metric-chip-value { font-size: 1.08rem; font-weight: 700; line-height: 1; }
+    .metric-chip-label { margin-top: 5px; font-size: .76rem; line-height: 1.25; color: #b8c3d8; }
+    .summary-footnote, .filter-hint, .row-preview-helper, .context-empty, .row-preview-empty, .action-helper, .reference-summary-copy { margin-top: 12px; color: #b8c3d8; font-size: .9rem; }
     .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .detail-card { background: rgba(32, 45, 68, 0.92); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; padding: 16px; min-height: 124px; }
+    .reference-detail-card { background: rgba(15, 23, 42, 0.46); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; padding: 16px; min-height: 124px; }
     .detail-title { font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #9fb2d1; margin-bottom: 8px; }
     .detail-body { font-size: 1rem; line-height: 1.5; color: #f8fafc; }
+    .action-card { border-color: rgba(96, 165, 250, 0.24); box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.08); padding: 14px 16px; }
+    .action-body { font-size: .96rem; line-height: 1.45; color: #f8fafc; }
+    .reference-details { display: block; }
+    .reference-summary { display: flex; justify-content: space-between; gap: 16px; align-items: center; cursor: pointer; list-style: none; }
+    .reference-summary::-webkit-details-marker { display: none; }
+    .reference-grid { margin-top: 14px; }
+    .decision-panel { border-color: rgba(244, 114, 182, 0.18); }
+    .module-intro { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.12); }
+    .module-intro-title { font-size: 1.02rem; font-weight: 700; color: #f8fafc; }
+    .module-intro-copy { display: none; }
     .context-table, .row-preview-table { width: 100%; border-collapse: collapse; }
     .context-table th, .context-table td, .row-preview-table th, .row-preview-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.12); vertical-align: top; }
     .context-table th, .row-preview-table th { color: #9fb2d1; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
     .row-preview-table-wrap { overflow-x: auto; }
-    .current-row { background: rgba(99, 102, 241, 0.14); }
-    .flagged-cell { background: rgba(248, 113, 113, 0.18); font-weight: 700; }
+    .excel-sheet-wrap { margin-top: 12px; border: 1px solid rgba(110, 125, 154, 0.38); border-radius: 10px; background: #1f2937; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
+    .row-preview-table { font-family: Calibri, "Segoe UI", Arial, sans-serif; background: #1f2937; }
+    .row-preview-table thead th { background: #273449; color: #dbe6ff; border-right: 1px solid rgba(148, 163, 184, 0.24); border-bottom: 1px solid rgba(148, 163, 184, 0.32); font-size: .78rem; font-weight: 700; letter-spacing: 0; }
+    .row-preview-table thead th:first-child { background: #334155; color: #e5eefc; }
+    .row-preview-table th, .row-preview-table td { padding: 8px 10px; font-size: .84rem; word-break: break-word; border-right: 1px solid rgba(148, 163, 184, 0.18); border-bottom: 1px solid rgba(148, 163, 184, 0.18); }
+    .row-preview-table tbody tr:nth-child(odd) td { background: #233149; }
+    .row-preview-table tbody tr:nth-child(even) td { background: #1f2b40; }
+    .row-preview-table tbody td:first-child { background: #31415b; color: #eef4ff; font-weight: 700; width: 72px; white-space: nowrap; }
+    .current-row td { background: #2e3d63 !important; }
+    .current-row td:first-child { background: #3b4c72 !important; }
+    .flagged-cell { position: relative; background: #42517a !important; font-weight: 700; box-shadow: inset 0 0 0 2px #22c55e; }
+    .evidence-summary { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(148, 163, 184, 0.12); }
+    .evidence-summary-main { min-width: 0; }
+    .evidence-summary-title { font-size: 1.35rem; font-weight: 700; line-height: 1.2; color: #f8fafc; }
+    .evidence-summary-subtitle { margin-top: 6px; color: #dbe6ff; font-size: .98rem; }
+    .evidence-action { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(148, 163, 184, 0.12); }
     .queue-subtitle { color: #b8c3d8; margin-top: 4px; margin-bottom: 12px; }
+    .queue-filter-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .queue-table-wrap { margin-top: 10px; }
+    .history-accordion { margin-top: 12px; }
+    .review-shell { gap: 18px; align-items: flex-start; }
+    .queue-panel, .review-flow-panel { gap: 14px; }
+    .review-flow-panel { border-left: 1px solid rgba(148, 163, 184, 0.2); padding-left: 22px; box-shadow: inset 1px 0 0 rgba(255,255,255,0.03); }
+    .active-finding-panel { margin-bottom: 10px; }
+    .secondary-accordion { margin-top: 12px; }
+    .gradio-container .tab-wrapper, .gradio-container .tabs { border-bottom: 1px solid rgba(148, 163, 184, 0.18); margin-bottom: 18px; padding-bottom: 12px; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.03); }
+    .gradio-container .tab-nav { gap: 8px; padding: 6px; background: rgba(20, 30, 48, 0.88); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 16px; display: inline-flex; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
+    .gradio-container .tab-nav button, .gradio-container button[role="tab"] { position: relative; padding: 10px 16px; border-radius: 12px; border: 1px solid transparent; color: #c7d4ea; background: transparent; }
+    .gradio-container .tab-nav button:hover, .gradio-container button[role="tab"]:hover { background: rgba(32, 45, 68, 0.82); color: #ffffff; border-color: rgba(148, 163, 184, 0.16); }
+    .gradio-container .tab-nav button.selected, .gradio-container button[role="tab"][aria-selected="true"] { background: rgba(79, 70, 229, 0.22); color: #ffffff; border-color: rgba(124, 131, 255, 0.45); box-shadow: inset 0 -2px 0 #7c83ff, 0 0 0 1px rgba(255,255,255,0.03); }
+    .gradio-container button, .gradio-container [role="button"] { transition: background .18s ease, border-color .18s ease, box-shadow .18s ease; }
+    .gradio-container .secondary-accordion button, .gradio-container .history-accordion button, .gradio-container .accordion button { background: rgba(32, 45, 68, 0.94); border: 1px solid rgba(148, 163, 184, 0.22); color: #f8fafc; box-shadow: 6px 6px 14px rgba(5,10,22,0.18), -3px -3px 10px rgba(255,255,255,0.02); }
+    .gradio-container .secondary-accordion button:hover, .gradio-container .history-accordion button:hover, .gradio-container .accordion button:hover { border-color: rgba(96, 165, 250, 0.42); background: rgba(38, 54, 82, 0.96); }
+    .gradio-container .secondary-accordion button::after, .gradio-container .history-accordion button::after, .gradio-container .accordion button::after { content: "v"; margin-left: auto; color: #bfdbfe; font-size: .9rem; }
+    .gradio-container .wrap .form > *, .gradio-container .form > * { border-color: rgba(148, 163, 184, 0.18); }
+    .gradio-container .queue-filter-grid .wrap, .gradio-container .queue-filter-grid .form, .gradio-container .queue-filter-grid input, .gradio-container .queue-filter-grid textarea, .gradio-container .queue-filter-grid button { box-shadow: none; }
+    .gradio-container .queue-filter-grid .wrap, .gradio-container .queue-filter-grid .form { border-top: 1px solid rgba(148, 163, 184, 0.1); padding-top: 10px; }
+    .gradio-container .queue-filter-grid > *:first-child .wrap, .gradio-container .queue-filter-grid > *:first-child .form { border-top: none; padding-top: 0; }
+    .gradio-container .queue-filter-grid button, .gradio-container .queue-filter-grid input, .gradio-container .queue-filter-grid textarea { border: 1px solid rgba(148, 163, 184, 0.24); background: rgba(58, 74, 101, 0.94); color: #f8fafc; }
+    .gradio-container .queue-filter-grid button:hover, .gradio-container .queue-filter-grid input:hover, .gradio-container .queue-filter-grid textarea:hover { border-color: rgba(96, 165, 250, 0.4); }
+    .gradio-container .queue-filter-grid label, .gradio-container .decision-panel label { color: #dbe6ff; }
+    .gradio-container .queue-filter-grid textarea, .gradio-container .queue-filter-grid input[type="text"] { min-height: 48px !important; height: 48px !important; line-height: 1.35; padding-top: 12px; padding-bottom: 12px; resize: none; overflow: hidden; }
+    .gradio-container .queue-filter-grid textarea::placeholder, .gradio-container .queue-filter-grid input[type="text"]::placeholder { color: #9fb2d1; }
+    .gradio-container .queue-filter-grid .scroll-hide, .gradio-container .queue-filter-grid [class*="scroll"] { scrollbar-width: thin; }
+    .gradio-container .queue-filter-grid .form { overflow: visible; }
+    .gradio-container .decision-panel { padding: 10px 14px 14px; margin-top: 6px; }
+    .gradio-container .decision-panel .wrap { border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 14px; background: rgba(20, 30, 48, 0.7); }
+    .gradio-container .decision-panel .wrap label { padding: 6px 10px; border-right: 1px solid rgba(148, 163, 184, 0.12); }
+    .gradio-container .decision-panel .wrap label:last-child { border-right: none; }
+    .gradio-container .decision-panel .wrap label:hover { background: rgba(79, 70, 229, 0.12); }
     .inline-icon { display: inline-flex; width: 16px; height: 16px; margin-right: 8px; flex: 0 0 16px; vertical-align: -3px; }
     .inline-icon svg { width: 16px; height: 16px; }
     .title-with-icon { display: inline-flex; align-items: center; gap: 8px; }
     .dashboard-title-row { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
     .dashboard-title { font-size: 1.35rem; font-weight: 700; color: #f8fafc; }
     .dashboard-subtitle { margin-top: 8px; color: #c7d4ea; line-height: 1.55; }
+    .dashboard-section-kicker { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 999px; background: rgba(79, 70, 229, 0.14); border: 1px solid rgba(124, 131, 255, 0.24); color: #c7d4ea; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
     .dashboard-kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
     .dashboard-kpi-card { background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92)); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; padding: 14px; min-height: 116px; }
     .dashboard-kpi-top { display: inline-flex; align-items: center; gap: 8px; color: #c7d4ea; font-size: .9rem; }
     .dashboard-kpi-value { margin-top: 16px; font-size: 1.9rem; font-weight: 700; color: #ffffff; }
     .dashboard-kpi-note { margin-top: 8px; color: #9fb2d1; font-size: .84rem; line-height: 1.45; }
+    .insight-shell { margin-top: 18px; padding: 18px; border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 20px; background: rgba(20, 30, 48, 0.44); }
+    .insight-shell-header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 14px; }
+    .insight-shell-title { margin-top: 10px; font-size: 1.08rem; font-weight: 700; color: #f8fafc; }
+    .insight-shell-copy { max-width: 420px; color: #9fb2d1; line-height: 1.5; font-size: .9rem; }
     .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .insight-card { background: rgba(20, 30, 48, 0.86); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; padding: 16px; min-height: 122px; }
+    .insight-card-focus { border-left: 3px solid rgba(245, 158, 11, 0.72); }
+    .insight-card-status { border-left: 3px solid rgba(96, 165, 250, 0.72); }
     .insight-title { display: inline-flex; align-items: center; gap: 8px; color: #f8fafc; font-size: .92rem; font-weight: 700; }
     .insight-body { margin-top: 12px; color: #c7d4ea; line-height: 1.55; }
     @media (max-width: 960px) {
-      .detail-grid, .insight-grid, .dashboard-kpi-grid, .metric-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+      .detail-grid, .insight-grid, .dashboard-kpi-grid, .metric-grid, .metric-strip { grid-template-columns: repeat(1, minmax(0, 1fr)); }
       .hero-row, .dashboard-title-row { flex-direction: column; }
+      .reference-summary { flex-direction: column; align-items: flex-start; }
+      .review-flow-panel { border-left: none; padding-left: 0; }
+      .insight-shell-header { flex-direction: column; }
+    }
+    @media (min-width: 961px) {
+      .queue-filter-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
     }
     """
 
@@ -1311,27 +1403,34 @@ def build_interface() -> gr.Blocks:
                         automatic_explanation_output = gr.Markdown()
 
                 with gr.TabItem("Review Centre"):
-                    with gr.Row():
-                        with gr.Column(scale=4):
-                            review_summary_html = gr.HTML(_build_summary_html(pd.DataFrame(), pd.DataFrame()))
+                    with gr.Row(elem_classes="review-shell"):
+                        with gr.Column(scale=3, elem_classes="queue-panel"):
                             with gr.Column(elem_classes="panel"):
-                                gr.Markdown("### Findings Queue")
-                                gr.Markdown("Filter the queue, then open one finding at a time in the evidence pane.", elem_classes="queue-subtitle")
-                                status_filter_input = gr.Dropdown(label="Status filter", choices=STATUS_FILTER_OPTIONS, value="All statuses")
-                                type_filter_input = gr.Dropdown(label="Finding type", choices=list(TYPE_FILTER_MAP.keys()), value="All finding types")
-                                search_text_input = gr.Textbox(label="Search queue", placeholder="Search by finding id, row number, or summary")
+                                gr.HTML("""
+                                <div class="module-intro">
+                                  <div class="eyebrow">Controls</div>
+                                  <div class="module-intro-title">Queue Controls</div>
+                                </div>
+                                """)
+                                review_summary_html = gr.HTML(_build_summary_html(pd.DataFrame(), pd.DataFrame()))
+                                with gr.Group(elem_classes="queue-filter-grid"):
+                                    status_filter_input = gr.Dropdown(label="Status filter", choices=STATUS_FILTER_OPTIONS, value="All statuses")
+                                    type_filter_input = gr.Dropdown(label="Finding type", choices=list(TYPE_FILTER_MAP.keys()), value="All finding types")
+                                    search_text_input = gr.Textbox(label="Search queue", placeholder="Search by finding id, row number, or summary", lines=1, max_lines=1)
                                 filter_hint_html = gr.HTML(_build_filter_hint_html(pd.DataFrame(), pd.DataFrame(), ""))
-                                finding_selector = gr.Dropdown(label="Selected finding", choices=[], value=None)
-                                review_queue_preview = gr.Dataframe(label="Visible queue", interactive=False, max_height=460, wrap=True)
-                                review_history_preview = gr.Dataframe(label="Saved review history", interactive=False, max_height=240, wrap=True)
-                        with gr.Column(scale=8):
-                            header_html = gr.HTML(_build_header_html(None, 0, 0))
+                        with gr.Column(scale=9, elem_classes="review-flow-panel"):
+                            with gr.Column(elem_classes=["panel", "active-finding-panel"]):
+                                gr.HTML("""
+                                <div class="module-intro">
+                                  <div class="eyebrow">Selection</div>
+                                  <div class="module-intro-title">Active Finding</div>
+                                </div>
+                                """)
+                                finding_selector = gr.Dropdown(label="Open finding", choices=[], value=None)
+                                header_html = gr.HTML(_build_header_html(None, 0, 0), visible=False)
                             row_preview_html = gr.HTML(_build_row_preview_html(None, None))
-                            explanation_html = gr.HTML(_build_explanation_html(None))
-                            record_context_html = gr.HTML(_build_record_context_html(None))
-                            with gr.Column(elem_classes="panel"):
-                                gr.Markdown("### Review Decision")
-                                decision_input = gr.Radio(label="Decision", choices=REVIEW_DECISION_OPTIONS, value="pending")
+                            with gr.Column(elem_classes=["panel", "decision-panel"]):
+                                decision_input = gr.Radio(label="Review decision", choices=REVIEW_DECISION_OPTIONS, value="pending")
                                 review_notes_input = gr.Textbox(
                                     label="Reviewer notes",
                                     placeholder="Explain why you confirmed, rejected, ignored, or left this item pending.",
@@ -1339,6 +1438,14 @@ def build_interface() -> gr.Blocks:
                                 )
                                 save_review_button = gr.Button("Save review decision", variant="primary")
                                 review_save_feedback = gr.Markdown("")
+                            with gr.Accordion("Current record context", open=False, elem_classes="secondary-accordion"):
+                                record_context_html = gr.HTML(_build_record_context_html(None))
+                            with gr.Accordion("Reference and explanation", open=False, elem_classes="secondary-accordion"):
+                                explanation_html = gr.HTML(_build_explanation_html(None))
+                            with gr.Accordion("Visible queue", open=False, elem_classes="secondary-accordion"):
+                                review_queue_preview = gr.Dataframe(label="Visible queue", show_label=False, interactive=False, max_height=520, wrap=False)
+                            with gr.Accordion("Saved review history", open=False, elem_classes="history-accordion"):
+                                review_history_preview = gr.Dataframe(label="Saved review history", show_label=False, interactive=False, max_height=260, wrap=False)
 
                 with gr.TabItem("Visual Insights"):
                     dashboard_summary_html = gr.HTML(_build_visual_summary_html(pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), None))
@@ -1412,8 +1519,8 @@ def build_interface() -> gr.Blocks:
                 review_queue_preview,
                 header_html,
                 row_preview_html,
-                explanation_html,
                 record_context_html,
+                explanation_html,
                 decision_input,
                 review_notes_input,
                 review_summary_html,
@@ -1434,8 +1541,8 @@ def build_interface() -> gr.Blocks:
                     review_queue_preview,
                     header_html,
                     row_preview_html,
-                    explanation_html,
                     record_context_html,
+                    explanation_html,
                     decision_input,
                     review_notes_input,
                     review_summary_html,
@@ -1463,8 +1570,8 @@ def build_interface() -> gr.Blocks:
                 review_queue_preview,
                 header_html,
                 row_preview_html,
-                explanation_html,
                 record_context_html,
+                explanation_html,
                 decision_input,
                 review_notes_input,
                 review_summary_html,
