@@ -6,6 +6,7 @@ find and keep consistent.
 ## Architecture
 
 - [docs/architecture/gui_architecture.md](architecture/gui_architecture.md)
+- [docs/defense_directory_guide.md](defense_directory_guide.md)
 
 ## Evaluation
 
