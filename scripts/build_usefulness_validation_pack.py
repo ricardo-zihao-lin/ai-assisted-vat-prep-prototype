@@ -2,8 +2,8 @@
 
 This script creates comparable outputs for a minimal raw issue-list baseline
 and the current review-oriented prototype output. The goal is to support the
-usefulness validation described in ``docs/evaluation_plan.md`` without
-requiring manual CSV assembly.
+usefulness validation described in ``docs/evaluation/evaluation_plan.md``
+without requiring manual CSV assembly.
 """
 
 from __future__ import annotations

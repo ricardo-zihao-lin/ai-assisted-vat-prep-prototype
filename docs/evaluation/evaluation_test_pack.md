@@ -25,7 +25,8 @@ The following evaluation assets are included in `data/evaluation/`:
 
 The repository also includes `scripts/build_usefulness_validation_pack.py`,
 which generates side-by-side usefulness comparison outputs under
-`output/usefulness_validation_pack/`.
+`output/runs/evaluation/usefulness_validation_pack/` and summary evidence under
+`output/evidence/evaluation/usefulness_validation_pack/`.
 
 ## 3. Dataset Roles
 
