@@ -23,6 +23,10 @@ The following evaluation assets are included in `data/evaluation/`:
 - `expected_issue_assertions.csv`
 - `review_usefulness_comparison_template.csv`
 
+The repository also includes `scripts/build_usefulness_validation_pack.py`,
+which generates side-by-side usefulness comparison outputs under
+`output/usefulness_validation_pack/`.
+
 ## 3. Dataset Roles
 
 ### 3.1 `deterministic_validation_case.csv`
@@ -85,8 +89,17 @@ Recommended use:
 
 1. run the prototype on each dataset
 2. compare generated issues against the assertion file
-3. confirm whether the expected `rule_id`, `status`, and `risk_level` were produced
+3. confirm whether the expected `rule_id`, `issue_type`, `status`, and `risk_level` were produced
 4. record pass/fail for each assertion
+
+The current runner writes `output/evaluation_assertion_results.csv` and `output/evaluation_assertion_summary.csv` so the comparison is machine-readable.
+
+For dissertation presentation, the repository also builds:
+
+- `output/evaluation_assertion_results_table.csv`
+- `output/evaluation_results_overview.csv`
+- `output/evaluation_evidence_chart.png`
+- `docs/evaluation_results.md`
 
 This gives a structured way to evaluate technical correctness without needing a large benchmark dataset.
 
@@ -122,8 +135,9 @@ Dataset:
 Task:
 
 1. run the dataset and open the generated issues
-2. compare the information shown in the enriched review-oriented output with a simplified raw issue list representation
-3. use `review_usefulness_comparison_template.csv` to document the comparison
+2. run `scripts/build_usefulness_validation_pack.py`
+3. compare the generated `raw_issue_list_baseline.csv` with `review_oriented_output.csv`
+4. use `usefulness_side_by_side.csv` and `review_usefulness_comparison_template.csv` to document the comparison
 
 Evaluation questions:
 
@@ -170,8 +184,8 @@ Treat the baseline as a minimal output containing only:
 Example:
 
 ```text
-row 1 | missing_value | date
-row 5 | anomaly | net_amount
+row 1 | missing_transaction_date | date
+row 5 | unusual_net_amount | net_amount
 ```
 
 ### 6.2 Review-oriented output
@@ -205,6 +219,11 @@ For each scenario, save:
 - `issue_report.csv`
 - `review_log.csv`
 - `review_history.csv`
+- `evaluation_assertion_results.csv`
+- `evaluation_assertion_summary.csv`
+- `raw_issue_list_baseline.csv`
+- `review_oriented_output.csv`
+- `usefulness_side_by_side.csv`
 - screenshots of the issue detail panel if needed
 - a completed pass/fail table based on `expected_issue_assertions.csv`
 - a completed usefulness comparison table based on `review_usefulness_comparison_template.csv`

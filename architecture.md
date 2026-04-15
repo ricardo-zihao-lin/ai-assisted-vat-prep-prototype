@@ -43,3 +43,22 @@ This output design supports traceability by ensuring that the user can see what 
 The end-to-end execution of the prototype is coordinated in `main.py` and `pipeline.py`. These files act as the orchestration layer that links the separate modules into a complete processing pipeline. The sequence begins by loading spreadsheet data, after which validation checks are performed. The resulting dataset is then passed to the anomaly detection stage, and the combined findings are exported into a review-ready set of artefacts. In the browser-based route, these findings are then presented through the Review Centre so the user can inspect the relevant row, understand why it was flagged, and save a decision. Finally, the supporting reports remain available as output files for later inspection.
 
 This pipeline structure keeps the prototype simple and easy to understand. Each stage performs one clear role, and the order of execution mirrors the intended business process of preparing spreadsheet VAT records for inspection. As a result, the system is not only practical to demonstrate but also straightforward to explain in a university dissertation, since the architectural flow directly reflects the functional purpose of the prototype.
+
+## 5.8 GUI Shell Boundary
+
+The browser interface in `gui.py` is intentionally larger than the core
+pipeline modules because it serves as the presentation shell for several user
+journeys at once: upload and run, review centre, visual insights, AI
+assistance, and downloads. That size does not mean the GUI owns the business
+logic. The actual review rules, review queue behaviour, explanations, and
+output generation remain in the shared core modules.
+
+This boundary is deliberate. The project is a local-first research prototype
+rather than a split frontend/backend web application, so the main requirement
+is consistency across source run, packaged demo, and Docker delivery. Keeping
+`gui.py` as one shell avoids duplicating workflow logic across multiple UI
+layers and makes the dissertation story easier to defend: the interface is the
+presentation layer, while the core modules remain the system of record.
+
+For a more detailed justification of the GUI structure, see
+[docs/gui_architecture.md](docs/gui_architecture.md).

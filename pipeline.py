@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from anomaly.anomaly_detector import detect_anomalies
-from export.exporter import export_outputs
+from export.exporter import export_input_diagnostics, export_outputs
 from ingestion.input_preparation import PREPARATION_STATUS_UNSUPPORTED, prepare_input_dataframe
 from ingestion.loader import load_spreadsheet
 from review.review_manager import EMPTY_REVIEW_HISTORY, EMPTY_REVIEW_LOG
@@ -42,6 +42,7 @@ class RunResult:
     preparation_message: str
     missing_required_fields: tuple[str, ...]
     dataset_snapshot_path: str | None
+    input_diagnostics_path: str | None
     prepared_canonical_records_path: str | None
     issue_report_path: str | None
     review_log_path: str | None
@@ -72,6 +73,15 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
             resolved_input_path,
             preparation_result.missing_required_fields,
         )
+        diagnostic_files = export_input_diagnostics(
+            raw_dataframe=raw_dataframe,
+            preparation_result=preparation_result,
+            output_dir=resolved_output_dir,
+        )
+        LOGGER.info(
+            "Unsupported-input diagnostics written to %s",
+            diagnostic_files["input_diagnostics"],
+        )
         return RunResult(
             input_file=str(resolved_input_path),
             rows_loaded=len(raw_dataframe),
@@ -82,7 +92,8 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
             preparation_status=preparation_result.status,
             preparation_message=preparation_result.message,
             missing_required_fields=preparation_result.missing_required_fields,
-            dataset_snapshot_path=None,
+            dataset_snapshot_path=str(diagnostic_files["dataset_snapshot"]),
+            input_diagnostics_path=str(diagnostic_files["input_diagnostics"]),
             prepared_canonical_records_path=None,
             issue_report_path=None,
             review_log_path=None,
@@ -130,6 +141,7 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
         preparation_message=preparation_result.message,
         missing_required_fields=preparation_result.missing_required_fields,
         dataset_snapshot_path=str(exported_files["dataset_snapshot"]),
+        input_diagnostics_path=None,
         prepared_canonical_records_path=str(exported_files["prepared_canonical_records"]),
         issue_report_path=str(exported_files["issue_report"]),
         review_log_path=str(exported_files["review_log"]),

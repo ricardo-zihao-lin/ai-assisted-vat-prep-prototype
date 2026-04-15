@@ -52,6 +52,7 @@ def _print_run_summary(result) -> None:
     if result.missing_required_fields:
         print(f"Missing required fields: {', '.join(result.missing_required_fields)}")
     print(f"dataset_snapshot: {result.dataset_snapshot_path}")
+    print(f"input_diagnostics: {result.input_diagnostics_path}")
     print(f"prepared_canonical_records: {result.prepared_canonical_records_path}")
     print(f"issue_report: {result.issue_report_path}")
     print(f"review_log: {result.review_log_path}")

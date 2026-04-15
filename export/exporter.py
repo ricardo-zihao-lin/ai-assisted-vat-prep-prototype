@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pandas as pd
 
+from ingestion.input_preparation import INPUT_DIAGNOSTIC_COLUMNS, PreparationResult, build_input_diagnostics
 from review.models import Issue, issues_to_records
 from review.review_manager import EMPTY_REVIEW_HISTORY, EMPTY_REVIEW_LOG
 
@@ -101,6 +102,7 @@ REVIEW_SUMMARY_COLUMNS = [
     "summary_note",
     "generated_by",
 ]
+INPUT_DIAGNOSTIC_FILE_NAME = "input_diagnostics.csv"
 
 
 def _decision_to_review_state(decision: str) -> str:
@@ -511,7 +513,7 @@ def _build_review_summary(
         "summary_id": f"SUM-{uuid4().hex[:12].upper()}",
         "dataset_id": dataset_id,
         "source_filename": source_filename or "",
-        "generated_at": pd.Timestamp.utcnow().isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "generated_at": pd.Timestamp.now(tz="UTC").isoformat(timespec="seconds").replace("+00:00", "Z"),
         "total_records": total_records,
         "records_with_issues": records_with_issues,
         "records_without_issues": records_without_issues,
@@ -564,6 +566,31 @@ def export_review_summary(
     summary_path = Path(output_path)
     summary_df.to_csv(summary_path, index=False)
     return summary_path
+
+
+def export_input_diagnostics(
+    raw_dataframe: pd.DataFrame,
+    preparation_result: PreparationResult,
+    output_dir: str | Path,
+) -> dict[str, Path]:
+    """Export the raw snapshot plus a compact unsupported-input diagnostic report."""
+    LOGGER.info("Exporting unsupported-input diagnostics to %s", output_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    dataset_snapshot_path = output_path / "dataset_snapshot.csv"
+    diagnostics_path = output_path / INPUT_DIAGNOSTIC_FILE_NAME
+
+    raw_dataframe.to_csv(dataset_snapshot_path, index=False)
+    diagnostics_df = build_input_diagnostics(raw_dataframe, preparation_result)
+    diagnostics_df = diagnostics_df.reindex(columns=[*INPUT_DIAGNOSTIC_COLUMNS])
+    diagnostics_df.to_csv(diagnostics_path, index=False)
+
+    LOGGER.info("Unsupported-input diagnostics written to %s", diagnostics_path)
+    return {
+        "dataset_snapshot": dataset_snapshot_path,
+        "input_diagnostics": diagnostics_path,
+    }
 
 
 def export_outputs(

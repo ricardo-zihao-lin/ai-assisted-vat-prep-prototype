@@ -140,7 +140,8 @@ Use prepared test spreadsheets containing controlled examples such as:
 ### Output
 
 - test case table
-- expected versus actual result comparison
+- automated pass/fail comparison
+- missing and unexpected issue mismatch report
 
 ## 8.2 Component B: Issue Output Evaluation
 
@@ -384,6 +385,7 @@ The following artefacts should be collected during evaluation:
 - test datasets
 - expected-results tables
 - actual issue outputs
+- assertion runner outputs
 - decision log outputs
 - review summary outputs
 - screenshots of the interface if relevant

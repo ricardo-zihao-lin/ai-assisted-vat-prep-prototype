@@ -129,6 +129,13 @@ venv\Scripts\python.exe main.py --input data\sample_data.csv --output-dir output
 
 This runs the shared pipeline directly and prints a concise summary. It is the recommended source-run path for developer checks and dissertation reproduction work.
 
+If the input file is missing required fields, the run now still writes a minimal local diagnostic bundle in the output directory:
+
+- `dataset_snapshot.csv`
+- `input_diagnostics.csv`
+
+The diagnostics file shows the required fields, what was mapped, which accepted aliases were available, and how to repair the upload before rerunning.
+
 ### 3. Run the local browser GUI
 
 Windows:
@@ -204,6 +211,7 @@ That document covers:
 - `explanation/` - local automatic explanation
 - `ai/` - compact snapshot and optional AI suggestion layer
 - `scripts/` - evaluation and supporting scripts
+- `docs/gui_architecture.md` - justification for the current GUI shell boundary
 
 ## Notes For Ongoing Evaluation Work
 
