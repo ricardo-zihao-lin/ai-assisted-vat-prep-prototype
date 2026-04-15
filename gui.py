@@ -26,7 +26,7 @@ from ai.prompts import DEFAULT_EDITABLE_EXPLANATION_PROMPT
 from ai.snapshot_builder import build_issue_snapshot
 from ai.suggestions_service import generate_advanced_ai_suggestions, try_generate_default_ai_suggestions
 from explanation.local_explainer import ISSUE_TYPE_LABELS, generate_automatic_explanation
-from export.exporter import ISSUE_REPORT_COLUMNS
+from export.exporter import ISSUE_REPORT_COLUMNS, export_review_summary
 from pipeline import STATUS_STOPPED_AFTER_REPORTING, STATUS_UNSUPPORTED_INPUT, run_pipeline
 from review.review_manager import (
     REVIEW_DECISION_OPTIONS,
@@ -51,19 +51,47 @@ PUBLIC_DEMO_PRIVACY_NOTE = (
     "Do not upload sensitive spreadsheets. Full source files are not sent to AI by default, and any optional AI path "
     "continues to use a compact findings snapshot only."
 )
-STATUS_FILTER_OPTIONS = ["All statuses", "Pending", "Confirmed", "Rejected", "Ignored"]
+STATUS_FILTER_OPTIONS = [
+    "All review states",
+    "Pending",
+    "Confirmed issue",
+    "Corrected",
+    "Accepted with note",
+    "False positive",
+    "Excluded",
+    "Escalated",
+]
 TYPE_FILTER_MAP = {
     "All finding types": None,
-    "Missing values": "missing_value",
-    "Duplicate rows": "duplicate_row",
-    "Invalid dates": "invalid_date_format",
-    "Invalid numeric values": "invalid_numeric_format",
-    "Missing columns": "missing_column",
-    "Anomalies": "anomaly",
+    "Missing values": [
+        "missing_transaction_date",
+        "missing_net_amount",
+        "missing_vat_amount",
+        "missing_required_review_field",
+    ],
+    "Duplicate rows": ["exact_duplicate_row"],
+    "Invalid dates": ["invalid_date_format"],
+    "Invalid numeric values": ["non_numeric_net_amount", "non_numeric_vat_amount"],
+    "Traceability gaps": [
+        "missing_counterparty_reference",
+        "missing_evidence_reference",
+        "missing_transaction_category_support_field",
+        "blank_description",
+    ],
+    "Amount consistency": [
+        "inconsistent_totals",
+        "conflicting_amount_sign_pattern",
+    ],
+    "Missing columns": ["missing_column"],
+    "Anomalies": [
+        "unusual_net_amount",
+        "negative_or_unusually_low_net_amount",
+        "suspicious_zero_value_amount_combination",
+    ],
 }
-QUEUE_PREVIEW_COLUMNS = ["finding_id", "row_index", "issue_type", "finding_summary", "decision"]
+QUEUE_PREVIEW_COLUMNS = ["issue_id", "row_index", "issue_type", "status", "risk_level", "finding_summary", "decision"]
 DOWNLOAD_PREVIEW_COLUMNS = [
-    "finding_id",
+    "issue_id",
     "finding_summary",
     "trigger_reason",
     "trigger_rule",
@@ -71,16 +99,71 @@ DOWNLOAD_PREVIEW_COLUMNS = [
     "suggested_action",
     "review_note",
 ]
-REVIEW_CONTEXT_COLUMNS = ["date", "description", "net_amount", "vat_amount", "category"]
+REVIEW_CONTEXT_COLUMNS = [
+    "date",
+    "invoice_reference",
+    "description",
+    "net_amount",
+    "vat_amount",
+    "gross_amount",
+    "counterparty_ref",
+    "document_reference",
+    "category",
+]
+REVIEW_SIGNAL_TYPES = {
+    "unusual_net_amount",
+    "negative_or_unusually_low_net_amount",
+    "suspicious_zero_value_amount_combination",
+}
 DASHBOARD_PRIORITY_COLUMNS = [
-    "finding_id",
+    "issue_id",
     "row_index",
     "issue_type",
+    "status",
+    "risk_level",
     "decision",
     "finding_summary",
     "fields_to_check",
     "suggested_action",
 ]
+
+DECISION_SORT_RANK = {
+    "pending": 0,
+    "escalated": 1,
+    "confirmed_issue": 2,
+    "corrected": 3,
+    "accepted_with_note": 4,
+    "false_positive": 5,
+    "excluded_from_review_set": 6,
+}
+
+STATUS_SORT_RANK = {
+    "Non-compliant": 0,
+    "Potentially non-compliant": 1,
+    "Review required": 2,
+}
+
+ISSUE_TYPE_SORT_RANK = {
+    "non_numeric_net_amount": 0,
+    "non_numeric_vat_amount": 0,
+    "invalid_date_format": 1,
+    "missing_transaction_date": 2,
+    "missing_net_amount": 2,
+    "missing_vat_amount": 2,
+    "inconsistent_totals": 3,
+    "conflicting_amount_sign_pattern": 3,
+    "exact_duplicate_row": 4,
+    "duplicate_invoice_reference": 4,
+    "missing_required_review_field": 5,
+    "missing_column": 5,
+    "missing_counterparty_reference": 6,
+    "missing_evidence_reference": 6,
+    "missing_transaction_category_support_field": 6,
+    "blank_description": 7,
+    "unusual_net_amount": 8,
+    "negative_or_unusually_low_net_amount": 8,
+    "suspicious_zero_value_amount_combination": 8,
+}
 
 
 @dataclass(frozen=True)
@@ -274,12 +357,25 @@ def _icon_svg(name: str) -> str:
 
 def _issue_type_colour(issue_type: str) -> str:
     palette = {
-        "missing_value": "#f97316",
-        "duplicate_row": "#6366f1",
+        "missing_transaction_date": "#f97316",
+        "missing_net_amount": "#f97316",
+        "missing_vat_amount": "#fb7185",
+        "missing_required_review_field": "#f59e0b",
+        "exact_duplicate_row": "#6366f1",
         "invalid_date_format": "#ef4444",
-        "invalid_numeric_format": "#ec4899",
+        "non_numeric_net_amount": "#ec4899",
+        "non_numeric_vat_amount": "#db2777",
+        "blank_description": "#a78bfa",
+        "duplicate_invoice_reference": "#8b5cf6",
+        "inconsistent_totals": "#f43f5e",
+        "missing_counterparty_reference": "#60a5fa",
+        "missing_evidence_reference": "#38bdf8",
+        "missing_transaction_category_support_field": "#60a5fa",
         "missing_column": "#a855f7",
-        "anomaly": "#14b8a6",
+        "unusual_net_amount": "#14b8a6",
+        "negative_or_unusually_low_net_amount": "#0ea5e9",
+        "suspicious_zero_value_amount_combination": "#22c55e",
+        "conflicting_amount_sign_pattern": "#ef4444",
     }
     return palette.get(issue_type, "#94a3b8")
 
@@ -319,9 +415,12 @@ def _build_review_status_plot(review_queue_df: pd.DataFrame) -> Figure:
 
     status_order = [
         ("pending", "Pending", "#60a5fa"),
-        ("confirm", "Confirmed", "#22c55e"),
-        ("reject", "Rejected", "#f87171"),
-        ("ignore", "Ignored", "#94a3b8"),
+        ("confirmed_issue", "Confirmed", "#22c55e"),
+        ("corrected", "Corrected", "#16a34a"),
+        ("accepted_with_note", "Accepted", "#94a3b8"),
+        ("false_positive", "False positive", "#c084fc"),
+        ("excluded_from_review_set", "Excluded", "#f97316"),
+        ("escalated", "Escalated", "#f87171"),
     ]
     counts = review_queue_df["decision"].fillna("pending").astype(str).value_counts()
     labels = [label for _, label, _ in status_order]
@@ -393,16 +492,20 @@ def _build_field_focus_plot(issue_report_df: pd.DataFrame) -> Figure:
 
 def _build_anomaly_amount_plot(issue_report_df: pd.DataFrame) -> Figure:
     if issue_report_df.empty or "issue_type" not in issue_report_df.columns:
-        return _build_message_figure("Anomaly Amount Overview", "No anomaly findings were recorded for this run.")
+        return _build_message_figure("Review Signal Overview", "No amount-based review signals were recorded for this run.")
 
-    anomaly_rows = issue_report_df[issue_report_df["issue_type"] == "anomaly"].copy()
+    anomaly_rows = issue_report_df[issue_report_df["issue_type"].isin(REVIEW_SIGNAL_TYPES)].copy()
     if anomaly_rows.empty:
-        return _build_message_figure("Anomaly Amount Overview", "No anomaly findings were recorded for this run.")
+        return _build_message_figure("Review Signal Overview", "No amount-based review signals were recorded for this run.")
 
+    anomaly_rows["observed_value"] = anomaly_rows["observed_value"].where(
+        anomaly_rows["observed_value"].notna(),
+        anomaly_rows.get("value"),
+    )
     anomaly_rows["observed_value"] = pd.to_numeric(anomaly_rows["observed_value"], errors="coerce")
     anomaly_rows = anomaly_rows.dropna(subset=["observed_value"])
     if anomaly_rows.empty:
-        return _build_message_figure("Anomaly Amount Overview", "No anomaly findings were recorded for this run.")
+        return _build_message_figure("Review Signal Overview", "No amount-based review signals were recorded for this run.")
 
     lower_bound = pd.to_numeric(anomaly_rows["lower_bound"], errors="coerce").dropna()
     upper_bound = pd.to_numeric(anomaly_rows["upper_bound"], errors="coerce").dropna()
@@ -416,10 +519,7 @@ def _build_anomaly_amount_plot(issue_report_df: pd.DataFrame) -> Figure:
         deviation = deviation.where(anomaly_rows["observed_value"] <= upper_value, anomaly_rows["observed_value"] - upper_value)
     anomaly_rows["deviation"] = deviation.abs()
     anomaly_rows = anomaly_rows.sort_values(["deviation", "observed_value"], ascending=[False, False]).head(10)
-    labels = [
-        f"{row['finding_id']} | row {int(row['row_index'])}"
-        for _, row in anomaly_rows.iterrows()
-    ]
+    labels = [f"{row['issue_id']} | row {int(row['row_index'])}" for _, row in anomaly_rows.iterrows()]
 
     figure = Figure(figsize=(5.3, 3.4), layout="constrained")
     axes = figure.subplots()
@@ -460,15 +560,15 @@ def _format_amount(value: object) -> str:
 
 def _build_anomaly_note(issue_report_df: pd.DataFrame) -> str:
     if issue_report_df.empty or "issue_type" not in issue_report_df.columns:
-        return "No anomaly findings were recorded for this run."
-    anomaly_rows = issue_report_df[issue_report_df["issue_type"] == "anomaly"].copy()
+        return "No amount-based review signals were recorded for this run."
+    anomaly_rows = issue_report_df[issue_report_df["issue_type"].isin(REVIEW_SIGNAL_TYPES)].copy()
     if anomaly_rows.empty:
-        return "No anomaly findings were recorded for this run."
+        return "No amount-based review signals were recorded for this run."
     lower_bound = pd.to_numeric(anomaly_rows.get("lower_bound"), errors="coerce").dropna()
     upper_bound = pd.to_numeric(anomaly_rows.get("upper_bound"), errors="coerce").dropna()
     lines = [
-        f"{len(anomaly_rows)} value(s) were flagged because they fall outside the usual amount range for this file.",
-        "The rule uses IQR-derived lower and upper bounds from the `net_amount` values.",
+        f"{len(anomaly_rows)} amount-oriented review signal(s) were flagged in this run.",
+        "These prompts include unusual, negative, or otherwise context-sensitive amount patterns that should be checked against supporting evidence.",
     ]
     if not lower_bound.empty and not upper_bound.empty:
         lines.append(
@@ -483,7 +583,9 @@ def _build_visual_summary_html(
     review_queue_df: pd.DataFrame,
     review_history_df: pd.DataFrame,
     prepared_records_path: str | None,
+    review_summary_path: str | None = None,
 ) -> str:
+    review_summary_df = _read_output_csv(review_summary_path) if review_summary_path else pd.DataFrame()
     if issue_report_df.empty and review_queue_df.empty:
         return f"""
         <div class="dashboard-shell">
@@ -499,10 +601,17 @@ def _build_visual_summary_html(
 
     prepared_rows = len(_read_output_csv(prepared_records_path, default_columns=REVIEW_CONTEXT_COLUMNS))
     counts = review_queue_df["decision"].fillna("pending").astype(str).value_counts() if not review_queue_df.empty else pd.Series(dtype=int)
-    reviewed_count = int(counts.get("confirm", 0) + counts.get("reject", 0) + counts.get("ignore", 0))
+    reviewed_count = int(
+        counts.get("confirmed_issue", 0)
+        + counts.get("corrected", 0)
+        + counts.get("accepted_with_note", 0)
+        + counts.get("false_positive", 0)
+        + counts.get("excluded_from_review_set", 0)
+        + counts.get("escalated", 0)
+    )
     issue_counts = issue_report_df["issue_type"].dropna().astype(str).value_counts() if "issue_type" in issue_report_df.columns else pd.Series(dtype=int)
-    duplicate_count = int(issue_counts.get("duplicate_row", 0))
-    anomaly_count = int(issue_counts.get("anomaly", 0))
+    duplicate_count = int(issue_counts.get("exact_duplicate_row", 0))
+    anomaly_count = int(sum(issue_counts.get(issue_type, 0) for issue_type in REVIEW_SIGNAL_TYPES))
 
     cards = [
         ("rows", "Rows loaded", prepared_rows, "Prepared records ready for inspection"),
@@ -510,7 +619,7 @@ def _build_visual_summary_html(
         ("pending", "Pending review", int(counts.get("pending", len(review_queue_df))), "Still waiting for a user decision"),
         ("reviewed", "Reviewed", reviewed_count, "Already captured in the decision log"),
         ("duplicate", "Duplicate rows", duplicate_count, "Potential repeated records"),
-        ("anomaly", "Unusual amounts", anomaly_count, "IQR-based amount prompts"),
+        ("anomaly", "Review signals", anomaly_count, "Unusual or context-sensitive amount prompts"),
     ]
     cards_html = "".join(
         f"""
@@ -523,6 +632,22 @@ def _build_visual_summary_html(
         for icon, label, value, note in cards
     )
 
+    summary_note_html = ""
+    if not review_summary_df.empty:
+        summary_row = review_summary_df.iloc[0]
+        summary_note = html.escape(str(summary_row.get("summary_note") or ""))
+        unresolved = html.escape(str(summary_row.get("unresolved_issue_count") or "0"))
+        high_risk_open = html.escape(str(summary_row.get("high_risk_open_count") or "0"))
+        completion_note = html.escape(str(summary_row.get("completion_criteria_note") or ""))
+        summary_note_html = f"""
+        <div class="insight-card insight-card-status" style="margin-top: 14px;">
+          <div class="insight-title">{_icon_svg("review")}<span>Review summary</span></div>
+          <div class="insight-body">{summary_note}</div>
+          <div class="summary-footnote">Unresolved issues: {unresolved} | Open high risk: {high_risk_open}</div>
+          <div class="summary-footnote">{completion_note}</div>
+        </div>
+        """
+
     return f"""
     <div class="dashboard-shell">
       <div class="dashboard-title-row">
@@ -533,6 +658,7 @@ def _build_visual_summary_html(
         </div>
       </div>
       <div class="dashboard-kpi-grid">{cards_html}</div>
+      {summary_note_html}
     </div>
     """
 
@@ -541,11 +667,28 @@ def _build_visual_highlights_html(issue_report_df: pd.DataFrame, review_queue_df
     if issue_report_df.empty and review_queue_df.empty:
         return '<div class="insight-shell"><div class="insight-shell-header"><div class="dashboard-section-kicker">Focus Areas</div><div class="insight-shell-title">What this run needs</div></div><div class="insight-grid"><div class="insight-card insight-card-focus"><div class="insight-title">No run loaded</div><div class="insight-body">Run an analysis to surface focused review guidance.</div></div></div></div>'
 
-    issue_counts = issue_report_df["issue_type"].dropna().astype(str).value_counts() if "issue_type" in issue_report_df.columns else pd.Series(dtype=int)
+    pending_issue_df = issue_report_df.copy()
+    if not review_queue_df.empty and {"issue_id", "decision"}.issubset(review_queue_df.columns):
+        pending_issue_df = pending_issue_df.merge(
+            review_queue_df[["issue_id", "decision"]],
+            on="issue_id",
+            how="left",
+            suffixes=("", "_review"),
+        )
+        if "decision_review" in pending_issue_df.columns:
+            pending_issue_df["decision"] = pending_issue_df["decision_review"]
+            pending_issue_df = pending_issue_df.drop(columns=["decision_review"])
+    if "decision" in pending_issue_df.columns:
+        pending_issue_df["decision"] = pending_issue_df["decision"].fillna("pending").astype(str)
+        unresolved_issue_df = pending_issue_df[pending_issue_df["decision"].eq("pending")]
+        if not unresolved_issue_df.empty:
+            pending_issue_df = unresolved_issue_df
+
+    issue_counts = pending_issue_df["issue_type"].dropna().astype(str).value_counts() if "issue_type" in pending_issue_df.columns else pd.Series(dtype=int)
     top_issue = issue_counts.index[0] if not issue_counts.empty else "no finding types"
     top_issue_count = int(issue_counts.iloc[0]) if not issue_counts.empty else 0
 
-    field_counts = _derive_review_field_series(issue_report_df)
+    field_counts = _derive_review_field_series(pending_issue_df)
     top_field = field_counts.index[0].replace("_", " ") if not field_counts.empty else "review field not available"
     top_field_count = int(field_counts.iloc[0]) if not field_counts.empty else 0
 
@@ -611,10 +754,10 @@ def _build_priority_findings_preview(issue_report_df: pd.DataFrame, review_queue
         return pd.DataFrame(columns=DASHBOARD_PRIORITY_COLUMNS)
 
     preview_df = issue_report_df.copy()
-    if not review_queue_df.empty and {"finding_id", "decision"}.issubset(review_queue_df.columns):
+    if not review_queue_df.empty and {"issue_id", "decision"}.issubset(review_queue_df.columns):
         preview_df = preview_df.merge(
-            review_queue_df[["finding_id", "decision"]],
-            on="finding_id",
+            review_queue_df[["issue_id", "decision"]],
+            on="issue_id",
             how="left",
             suffixes=("", "_review"),
         )
@@ -625,27 +768,27 @@ def _build_priority_findings_preview(issue_report_df: pd.DataFrame, review_queue
         preview_df["decision"] = "pending"
     else:
         preview_df["decision"] = preview_df["decision"].fillna("pending").astype(str)
-    preview_df["issue_rank"] = preview_df["issue_type"].map(
-        {
-            "invalid_numeric_format": 0,
-            "invalid_date_format": 1,
-            "missing_value": 2,
-            "missing_column": 3,
-            "duplicate_row": 4,
-            "anomaly": 5,
-        }
-    ).fillna(99)
-    preview_df["decision_rank"] = preview_df["decision"].ne("pending").astype(int)
+    preview_df["issue_rank"] = preview_df["issue_type"].map(ISSUE_TYPE_SORT_RANK).fillna(99)
+    preview_df["decision_rank"] = preview_df["decision"].map(DECISION_SORT_RANK).fillna(99)
+    preview_df["risk_rank"] = preview_df["risk_level"].astype(str).map({"High": 0, "Medium": 1, "Low": 2}).fillna(3)
     preview_df["anomaly_score_numeric"] = pd.to_numeric(preview_df.get("anomaly_score"), errors="coerce").fillna(0.0)
     preview_df = preview_df.sort_values(
-        ["decision_rank", "issue_rank", "anomaly_score_numeric", "row_index"],
-        ascending=[True, True, False, True],
+        ["decision_rank", "risk_rank", "issue_rank", "anomaly_score_numeric", "row_index"],
+        ascending=[True, True, True, False, True],
     )
 
     preview_df = preview_df.reindex(columns=DASHBOARD_PRIORITY_COLUMNS).head(12).copy()
     preview_df["issue_type"] = preview_df["issue_type"].map(_normalise_issue_label)
     preview_df["decision"] = preview_df["decision"].map(
-        {"pending": "Pending", "confirm": "Confirmed", "reject": "Rejected", "ignore": "Ignored"}
+        {
+            "pending": "Pending",
+            "confirmed_issue": "Confirmed issue",
+            "corrected": "Corrected",
+            "accepted_with_note": "Accepted with note",
+            "false_positive": "False positive",
+            "excluded_from_review_set": "Excluded",
+            "escalated": "Escalated",
+        }
     ).fillna("Pending")
     return preview_df
 
@@ -655,9 +798,16 @@ def _build_visual_insights_bundle(
     review_queue_df: pd.DataFrame,
     review_history_df: pd.DataFrame,
     prepared_records_path: str | None,
+    review_summary_path: str | None = None,
 ) -> tuple:
     return (
-        _build_visual_summary_html(issue_report_df, review_queue_df, review_history_df, prepared_records_path),
+        _build_visual_summary_html(
+            issue_report_df,
+            review_queue_df,
+            review_history_df,
+            prepared_records_path,
+            review_summary_path,
+        ),
         _build_visual_highlights_html(issue_report_df, review_queue_df, review_history_df),
         _build_issue_type_counts_plot(issue_report_df),
         _build_review_status_plot(review_queue_df),
@@ -670,6 +820,34 @@ def _build_visual_insights_bundle(
 
 def _build_issue_report_preview(issue_report_df: pd.DataFrame) -> pd.DataFrame:
     return issue_report_df.reindex(columns=DOWNLOAD_PREVIEW_COLUMNS).head(50)
+
+
+def _build_review_summary_preview(review_summary_df: pd.DataFrame) -> pd.DataFrame:
+    if review_summary_df.empty:
+        return pd.DataFrame(
+            columns=[
+                "total_records",
+                "total_issues",
+                "unresolved_issue_count",
+                "high_risk_open_count",
+                "escalated_issue_count",
+                "review_completion_rate",
+                "is_review_complete",
+                "summary_note",
+            ]
+        )
+    return review_summary_df.reindex(
+        columns=[
+            "total_records",
+            "total_issues",
+            "unresolved_issue_count",
+            "high_risk_open_count",
+            "escalated_issue_count",
+            "review_completion_rate",
+            "is_review_complete",
+            "summary_note",
+        ]
+    ).head(1)
 
 
 def _queue_to_records(review_queue_df: pd.DataFrame) -> list[dict]:
@@ -685,11 +863,24 @@ def _records_to_queue(review_queue_records: list[dict] | None) -> pd.DataFrame:
 def _normalise_filter_status(filter_value: str) -> str | None:
     mapping = {
         "Pending": "pending",
-        "Confirmed": "confirm",
-        "Rejected": "reject",
-        "Ignored": "ignore",
+        "Confirmed issue": "confirmed_issue",
+        "Corrected": "corrected",
+        "Accepted with note": "accepted_with_note",
+        "False positive": "false_positive",
+        "Excluded": "excluded_from_review_set",
+        "Escalated": "escalated",
     }
     return mapping.get(filter_value)
+
+
+def _ensure_issue_id_column(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """Normalise legacy queue/report dataframes to use ``issue_id`` as the primary key."""
+    if dataframe.empty:
+        return dataframe
+    normalised_df = dataframe.copy()
+    if "issue_id" not in normalised_df.columns and "finding_id" in normalised_df.columns:
+        normalised_df["issue_id"] = normalised_df["finding_id"]
+    return normalised_df
 
 
 def _apply_review_filters(
@@ -701,19 +892,19 @@ def _apply_review_filters(
     if review_queue_df.empty:
         return review_queue_df
 
-    filtered_df = review_queue_df.copy()
+    filtered_df = _ensure_issue_id_column(review_queue_df)
     status_value = _normalise_filter_status(status_filter)
     if status_value is not None:
         filtered_df = filtered_df[filtered_df["decision"].fillna("pending").astype(str) == status_value]
 
     issue_type_value = TYPE_FILTER_MAP.get(type_filter)
     if issue_type_value is not None:
-        filtered_df = filtered_df[filtered_df["issue_type"].astype(str) == issue_type_value]
+        filtered_df = filtered_df[filtered_df["issue_type"].astype(str).isin(issue_type_value)]
 
     search_value = (search_text or "").strip().lower()
     if search_value:
         searchable = (
-            filtered_df["finding_id"].astype(str).str.lower()
+            filtered_df["issue_id"].astype(str).str.lower()
             + " "
             + filtered_df["finding_summary"].astype(str).str.lower()
             + " "
@@ -723,16 +914,27 @@ def _apply_review_filters(
         )
         filtered_df = filtered_df[searchable.str.contains(search_value, na=False)]
 
+    filtered_df = filtered_df.copy()
+    filtered_df["decision_sort_rank"] = filtered_df["decision"].fillna("pending").astype(str).map(DECISION_SORT_RANK).fillna(99)
+    filtered_df["risk_sort_rank"] = filtered_df["risk_level"].astype(str).map({"High": 0, "Medium": 1, "Low": 2}).fillna(3)
+    filtered_df["status_sort_rank"] = filtered_df["status"].astype(str).map(STATUS_SORT_RANK).fillna(99)
+    filtered_df["issue_sort_rank"] = filtered_df["issue_type"].astype(str).map(ISSUE_TYPE_SORT_RANK).fillna(99)
+    filtered_df["row_index_numeric"] = pd.to_numeric(filtered_df["row_index"], errors="coerce").fillna(10**9)
+    filtered_df = filtered_df.sort_values(
+        ["decision_sort_rank", "risk_sort_rank", "status_sort_rank", "issue_sort_rank", "row_index_numeric", "issue_id"],
+        ascending=[True, True, True, True, True, True],
+    ).drop(columns=["decision_sort_rank", "risk_sort_rank", "status_sort_rank", "issue_sort_rank", "row_index_numeric"])
+
     return filtered_df.reset_index(drop=True)
 
 
-def _build_finding_choices(filtered_df: pd.DataFrame) -> list[str]:
+def _build_issue_choices(filtered_df: pd.DataFrame) -> list[str]:
     if filtered_df.empty:
         return []
-    return [f"{row['finding_id']} | row {row['row_index']} | {row['finding_summary']}" for _, row in filtered_df.iterrows()]
+    return [f"{row['issue_id']} | row {row['row_index']} | {row['finding_summary']}" for _, row in filtered_df.iterrows()]
 
 
-def _extract_finding_id(choice_value: str | None) -> str | None:
+def _extract_issue_id(choice_value: str | None) -> str | None:
     if not choice_value:
         return None
     return choice_value.split("|", 1)[0].strip()
@@ -748,16 +950,26 @@ def _build_queue_preview(filtered_df: pd.DataFrame) -> pd.DataFrame:
 
 def _build_review_history_preview(review_history_df: pd.DataFrame) -> pd.DataFrame:
     if review_history_df.empty:
-        return pd.DataFrame(columns=["finding_id", "decision", "notes", "saved_at"])
-    return review_history_df.reindex(columns=["finding_id", "decision", "notes", "saved_at"])
+        return pd.DataFrame(
+            columns=["issue_id", "decision", "final_record_status", "needs_escalation", "evidence_checked", "note", "timestamp"]
+        )
+    preview_df = review_history_df.copy()
+    preview_df = _ensure_issue_id_column(preview_df)
+    if "note" not in preview_df.columns and "notes" in preview_df.columns:
+        preview_df["note"] = preview_df["notes"]
+    if "timestamp" not in preview_df.columns and "saved_at" in preview_df.columns:
+        preview_df["timestamp"] = preview_df["saved_at"]
+    return preview_df.reindex(
+        columns=["issue_id", "decision", "final_record_status", "needs_escalation", "evidence_checked", "note", "timestamp"]
+    )
 
 
 def _resolve_selected_row(filtered_df: pd.DataFrame, selected_choice: str | None) -> pd.Series | None:
     if filtered_df.empty:
         return None
-    finding_id = _extract_finding_id(selected_choice)
-    if finding_id:
-        match = filtered_df[filtered_df["finding_id"] == finding_id]
+    issue_id = _extract_issue_id(selected_choice)
+    if issue_id:
+        match = filtered_df[filtered_df["issue_id"] == issue_id]
         if not match.empty:
             return match.iloc[0]
     return filtered_df.iloc[0]
@@ -775,19 +987,35 @@ def _html_escape(value: object) -> str:
 def _status_badge(decision: str) -> tuple[str, str]:
     mapping = {
         "pending": ("Pending", "badge-pending"),
-        "confirm": ("Confirmed", "badge-confirm"),
-        "reject": ("Rejected", "badge-reject"),
-        "ignore": ("Ignored", "badge-ignore"),
+        "confirmed_issue": ("Confirmed issue", "badge-confirm"),
+        "corrected": ("Corrected", "badge-confirm"),
+        "accepted_with_note": ("Accepted with note", "badge-ignore"),
+        "false_positive": ("False positive", "badge-ignore"),
+        "excluded_from_review_set": ("Excluded", "badge-reject"),
+        "escalated": ("Escalated", "badge-reject"),
     }
     return mapping.get(decision, ("Pending", "badge-pending"))
 
 
-def _finding_kind_badge(issue_type: str) -> tuple[str, str]:
-    if issue_type == "anomaly":
-        return "Advisory anomaly", "badge-anomaly"
-    if issue_type in {"missing_value", "invalid_date_format", "invalid_numeric_format", "missing_column"}:
-        return "Data quality issue", "badge-data"
-    return "Review item", "badge-neutral"
+def _issue_kind_badge(issue_type: str) -> tuple[str, str]:
+    if issue_type in REVIEW_SIGNAL_TYPES:
+        return "Review signal", "badge-anomaly"
+    if issue_type in {
+        "missing_transaction_date",
+        "missing_net_amount",
+        "missing_vat_amount",
+        "missing_required_review_field",
+        "invalid_date_format",
+        "non_numeric_net_amount",
+        "non_numeric_vat_amount",
+        "inconsistent_totals",
+        "missing_counterparty_reference",
+        "missing_evidence_reference",
+        "missing_transaction_category_support_field",
+        "missing_column",
+    }:
+        return "Deterministic issue", "badge-data"
+    return "Review issue", "badge-neutral"
 
 
 def _build_header_html(selected_row: pd.Series | None, filtered_count: int, total_count: int) -> str:
@@ -795,26 +1023,29 @@ def _build_header_html(selected_row: pd.Series | None, filtered_count: int, tota
         return """
         <div class="hero-card">
           <div class="hero-title">Review Centre</div>
-          <div class="hero-subtitle">No finding matches the current filters.</div>
+          <div class="hero-subtitle">No issue matches the current filters.</div>
         </div>
         """
 
     decision_label, decision_class = _status_badge(str(selected_row.get("decision") or "pending"))
-    kind_label, kind_class = _finding_kind_badge(str(selected_row.get("issue_type") or ""))
+    kind_label, kind_class = _issue_kind_badge(str(selected_row.get("issue_type") or ""))
+    issue_status = _html_escape(selected_row.get("status"))
+    risk_level = _html_escape(selected_row.get("risk_level"))
     return f"""
     <div class="hero-card">
       <div class="hero-row">
         <div>
-          <div class="eyebrow">{_icon_svg("review")}Selected finding</div>
-          <div class="hero-title">{_html_escape(selected_row.get('finding_id'))} - Row {_html_escape(selected_row.get('row_index'))}</div>
+          <div class="eyebrow">{_icon_svg("review")}Selected issue</div>
+          <div class="hero-title">{_html_escape(selected_row.get('issue_id'))} - Row {_html_escape(selected_row.get('row_index'))}</div>
           <div class="hero-subtitle">{_html_escape(selected_row.get('finding_summary'))}</div>
+          <div class="hero-meta">Issue status: {issue_status} | Risk level: {risk_level}</div>
         </div>
         <div class="hero-badges">
           <span class="badge {decision_class}">{decision_label}</span>
           <span class="badge {kind_class}">{kind_label}</span>
         </div>
       </div>
-      <div class="hero-meta">Showing {filtered_count} finding(s) under the current filters out of {total_count} in this run.</div>
+      <div class="hero-meta">Showing {filtered_count} issue(s) under the current filters out of {total_count} in this run.</div>
     </div>
     """
 
@@ -824,7 +1055,7 @@ def _build_summary_html(review_queue_df: pd.DataFrame, review_history_df: pd.Dat
         return f"""
         <div class="summary-card">
           <div class="summary-title"><span class="title-with-icon">{_icon_svg("queue")}<span>Queue Summary</span></span></div>
-          <div class="summary-empty">Run an analysis to load findings into the review workspace.</div>
+          <div class="summary-empty">Run an analysis to load issues into the review workspace.</div>
         </div>
         """
 
@@ -835,12 +1066,22 @@ def _build_summary_html(review_queue_df: pd.DataFrame, review_history_df: pd.Dat
         if not saved_values.empty:
             last_saved = saved_values.iloc[-1]
 
+    open_high_risk = 0
+    if {"risk_level", "decision"}.issubset(review_queue_df.columns):
+        open_high_risk = int(
+            (
+                review_queue_df["risk_level"].astype(str).eq("High")
+                & review_queue_df["decision"].fillna("pending").astype(str).eq("pending")
+            ).sum()
+        )
+
     metrics = [
-        ("Findings", len(review_queue_df), "metric-total"),
+        ("Issues", len(review_queue_df), "metric-total"),
         ("Pending", int(counts.get("pending", 0)), "metric-pending"),
-        ("Confirmed", int(counts.get("confirm", 0)), "metric-confirm"),
-        ("Rejected", int(counts.get("reject", 0)), "metric-reject"),
-        ("Ignored", int(counts.get("ignore", 0)), "metric-ignore"),
+        ("Corrected", int(counts.get("corrected", 0)), "metric-confirm"),
+        ("Accepted", int(counts.get("accepted_with_note", 0)), "metric-ignore"),
+        ("Escalated", int(counts.get("escalated", 0)), "metric-reject"),
+        ("Open High Risk", open_high_risk, "metric-reject"),
     ]
     metric_html = "".join(
         f'<div class="metric-chip {css_class}"><div class="metric-chip-value">{value}</div><div class="metric-chip-label">{label}</div></div>'
@@ -860,18 +1101,18 @@ def _build_filter_hint_html(filtered_df: pd.DataFrame, total_df: pd.DataFrame, s
     if total_df.empty:
         return '<div class="filter-hint">Filters will appear after you run an analysis.</div>'
     suffix = f' Search: "{html.escape(search_text.strip())}".' if (search_text or "").strip() else ""
-    return f'<div class="filter-hint">Showing {len(filtered_df)} of {len(total_df)} findings.{suffix}</div>'
+    return f'<div class="filter-hint">Showing {len(filtered_df)} of {len(total_df)} issues.{suffix}</div>'
 
 
 def _build_explanation_html(selected_row: pd.Series | None) -> str:
     if selected_row is None:
-        return '<div class="context-empty">Select a finding to inspect the supporting explanation.</div>'
+        return '<div class="context-empty">Select an issue to inspect the review guidance.</div>'
 
     cards = [
-        ("reason", "Trigger Reason", selected_row.get("trigger_reason")),
-        ("rule", "Rule Used", selected_row.get("trigger_rule")),
-        ("check", "What To Check", selected_row.get("fields_to_check")),
-        ("interpret", "Interpretation", selected_row.get("review_note")),
+        ("reason", "Why It Matters", selected_row.get("why_it_matters")),
+        ("interpret", "Possible VAT Review Impact", selected_row.get("possible_vat_review_impact")),
+        ("action", "Recommended Manual Check", selected_row.get("recommended_manual_check")),
+        ("check", "Evidence Expected", selected_row.get("evidence_expected")),
     ]
     card_html = "".join(
         f"""
@@ -913,23 +1154,23 @@ def _build_row_preview_html(selected_row: pd.Series | None, prepared_records_pat
         return f'<div class="row-preview-card"><div class="eyebrow">Evidence</div><div class="row-preview-title"><span class="title-with-icon">{_icon_svg("rows")}<span>Row Preview</span></span></div><div class="row-preview-empty">The selected row could not be located in the prepared records.</div></div>'
 
     issue_type = str(selected_row.get("issue_type") or "")
-    if issue_type == "duplicate_row":
+    if issue_type == "exact_duplicate_row":
         current_record = prepared_df.iloc[row_index]
         matching_mask = prepared_df.eq(current_record).all(axis=1)
         preview_df = prepared_df.loc[matching_mask].copy()
-        helper = "The duplicate check is showing the matching repeated rows so you can compare them directly."
+        helper = "The duplicate check is showing the matching repeated rows so you can compare them directly before recording a decision."
     else:
         start = max(0, row_index - 1)
         end = min(len(prepared_df), row_index + 2)
         preview_df = prepared_df.iloc[start:end].copy()
-        helper = "The highlighted row is the selected finding. The highlighted cell is the field that triggered the review item."
+        helper = "The highlighted row is the selected issue. Use it with the explanation panel and supporting evidence before recording a review decision."
 
     preview_df = preview_df.reset_index(names="row_index")
     flagged_field = str(selected_row.get("column") or selected_row.get("checked_column") or "").strip()
     header_html = "".join(f"<th>{html.escape(column)}</th>" for column in preview_df.columns)
     body_rows: list[str] = []
     decision_label, decision_class = _status_badge(str(selected_row.get("decision") or "pending"))
-    kind_label, kind_class = _finding_kind_badge(str(selected_row.get("issue_type") or ""))
+    kind_label, kind_class = _issue_kind_badge(str(selected_row.get("issue_type") or ""))
     suggested_action = _html_escape(selected_row.get("suggested_action"))
     for _, row in preview_df.iterrows():
         row_class = "current-row" if int(row["row_index"]) == row_index else ""
@@ -946,7 +1187,7 @@ def _build_row_preview_html(selected_row: pd.Series | None, prepared_records_pat
       <div class="eyebrow">Evidence</div>
       <div class="evidence-summary">
         <div class="evidence-summary-main">
-          <div class="evidence-summary-title">{_html_escape(selected_row.get('finding_id'))} - Row {_html_escape(selected_row.get('row_index'))}</div>
+          <div class="evidence-summary-title">{_html_escape(selected_row.get('issue_id'))} - Row {_html_escape(selected_row.get('row_index'))}</div>
           <div class="evidence-summary-subtitle">{_html_escape(selected_row.get('finding_summary'))}</div>
         </div>
         <div class="hero-badges">
@@ -964,7 +1205,7 @@ def _build_row_preview_html(selected_row: pd.Series | None, prepared_records_pat
       </div>
       <div class="evidence-action">
         <div class="eyebrow">Next step</div>
-        <div class="action-title"><span class="title-with-icon">{_icon_svg("action")}<span>Suggested Action</span></span></div>
+        <div class="action-title"><span class="title-with-icon">{_icon_svg("action")}<span>Recommended Manual Check</span></span></div>
         <div class="action-body">{suggested_action}</div>
       </div>
     </div>
@@ -978,14 +1219,15 @@ def _build_review_workspace(
     status_filter: str,
     type_filter: str,
     search_text: str,
-    selected_finding: str | None,
+    selected_issue: str | None,
 ) -> tuple:
     filtered_df = _apply_review_filters(review_queue_df, status_filter, type_filter, search_text)
-    selected_row = _resolve_selected_row(filtered_df, selected_finding)
-    selected_choice = None if selected_row is None else f"{selected_row['finding_id']} | row {selected_row['row_index']} | {selected_row['finding_summary']}"
-    choices = _build_finding_choices(filtered_df)
+    selected_row = _resolve_selected_row(filtered_df, selected_issue)
+    selected_choice = None if selected_row is None else f"{selected_row['issue_id']} | row {selected_row['row_index']} | {selected_row['finding_summary']}"
+    choices = _build_issue_choices(filtered_df)
     decision_value = "pending" if selected_row is None else str(selected_row.get("decision") or "pending")
     notes_value = "" if selected_row is None else str(selected_row.get("notes") or "")
+    evidence_value = "" if selected_row is None else str(selected_row.get("evidence_checked") or "")
 
     return (
         gr.update(choices=choices, value=selected_choice),
@@ -996,6 +1238,7 @@ def _build_review_workspace(
         _build_record_context_html(selected_row),
         _build_explanation_html(selected_row),
         decision_value,
+        evidence_value,
         notes_value,
         _build_summary_html(review_queue_df, review_history_df),
         _build_review_history_preview(review_history_df),
@@ -1019,6 +1262,7 @@ def run_analysis(
     issue_report_df = _read_output_csv(result.issue_report_path, default_columns=ISSUE_REPORT_COLUMNS)
     review_log_df = _read_output_csv(result.review_log_path, default_columns=REVIEW_LOG_COLUMNS)
     review_history_df = _read_output_csv(result.review_history_path, default_columns=REVIEW_HISTORY_COLUMNS)
+    review_summary_df = _read_output_csv(result.review_summary_path)
     review_queue_df = build_review_queue(issue_report_df, review_log_df)
 
     if result.status == STATUS_UNSUPPORTED_INPUT:
@@ -1048,13 +1292,15 @@ def run_analysis(
         "issue_report_path": result.issue_report_path,
         "review_log_path": result.review_log_path,
         "review_history_path": result.review_history_path,
+        "review_summary_path": result.review_summary_path,
         "prepared_records_path": result.prepared_canonical_records_path,
+        "source_filename": input_path.name,
     }
     review_workspace = _build_review_workspace(
         review_queue_df,
         review_history_df,
         review_paths,
-        "All statuses",
+        "All review states",
         "All finding types",
         "",
         None,
@@ -1064,6 +1310,7 @@ def run_analysis(
         review_queue_df,
         review_history_df,
         result.prepared_canonical_records_path,
+        result.review_summary_path,
     )
 
     return (
@@ -1085,10 +1332,12 @@ def run_analysis(
         result.issue_report_path,
         result.review_log_path,
         result.review_history_path,
+        result.review_summary_path,
         result.dataset_snapshot_path,
         result.prepared_canonical_records_path,
         _build_issue_report_preview(issue_report_df),
-        "All statuses",
+        _build_review_summary_preview(review_summary_df),
+        "All review states",
         "All finding types",
         "",
         *review_workspace,
@@ -1099,7 +1348,7 @@ def run_analysis(
 
 
 def refresh_review_workspace(
-    selected_finding: str | None,
+    selected_issue: str | None,
     status_filter: str,
     type_filter: str,
     search_text: str,
@@ -1116,13 +1365,14 @@ def refresh_review_workspace(
         status_filter,
         type_filter,
         search_text,
-        selected_finding,
+        selected_issue,
     )
 
 
 def save_review_decision(
-    selected_finding: str | None,
+    selected_issue: str | None,
     decision: str,
+    evidence_checked: str,
     notes: str,
     status_filter: str,
     type_filter: str,
@@ -1134,19 +1384,31 @@ def save_review_decision(
         raise gr.Error("Run an analysis first so the review files can be created.")
 
     review_queue_df = _records_to_queue(review_queue_records)
+    review_queue_df = _ensure_issue_id_column(review_queue_df)
     if review_queue_df.empty:
-        raise gr.Error("There are no findings available for review in the current run.")
+        raise gr.Error("There are no issues available for review in the current run.")
 
-    finding_id = _extract_finding_id(selected_finding)
-    if not finding_id:
-        raise gr.Error("Select a finding before saving a review decision.")
+    issue_id = _extract_issue_id(selected_issue)
+    if not issue_id:
+        raise gr.Error("Select an issue before saving a review decision.")
 
-    matching_rows = review_queue_df["finding_id"] == finding_id
+    matching_rows = review_queue_df["issue_id"] == issue_id
     if not matching_rows.any():
-        raise gr.Error("The selected finding could not be located in the current review queue.")
+        raise gr.Error("The selected issue could not be located in the current review queue.")
 
-    review_queue_df.loc[matching_rows, "decision"] = (decision or "pending").strip().lower()
-    review_queue_df.loc[matching_rows, "notes"] = (notes or "").strip()
+    normalised_decision = (decision or "pending").strip().lower()
+    normalised_evidence = (evidence_checked or "").strip()
+    normalised_notes = (notes or "").strip()
+
+    if normalised_decision != "pending":
+        if not normalised_evidence:
+            raise gr.Error("Record what evidence was checked before saving a review decision.")
+        if not normalised_notes:
+            raise gr.Error("Add a short decision reason or review note before saving a review decision.")
+
+    review_queue_df.loc[matching_rows, "decision"] = normalised_decision
+    review_queue_df.loc[matching_rows, "evidence_checked"] = normalised_evidence
+    review_queue_df.loc[matching_rows, "notes"] = normalised_notes
 
     current_log_df, review_history_df = persist_review_outputs(
         review_queue_df,
@@ -1154,6 +1416,17 @@ def save_review_decision(
         review_paths["review_history_path"],
     )
     issue_report_df = _read_output_csv(review_paths["issue_report_path"], default_columns=ISSUE_REPORT_COLUMNS)
+    prepared_records_df = _read_output_csv(review_paths.get("prepared_records_path"))
+    if review_paths.get("review_summary_path"):
+        export_review_summary(
+            issue_report_df,
+            prepared_records_df,
+            current_log_df,
+            review_paths["review_summary_path"],
+            dataset_id=f"DATASET-{Path(review_paths['review_summary_path']).resolve().parent.name}",
+            source_filename=review_paths.get("source_filename"),
+        )
+    review_summary_df = _read_output_csv(review_paths.get("review_summary_path"))
     refreshed_queue_df = build_review_queue(issue_report_df, current_log_df)
     review_workspace = _build_review_workspace(
         refreshed_queue_df,
@@ -1162,23 +1435,26 @@ def save_review_decision(
         status_filter,
         type_filter,
         search_text,
-        selected_finding,
+        selected_issue,
     )
     visual_bundle = _build_visual_insights_bundle(
         issue_report_df,
         refreshed_queue_df,
         review_history_df,
         review_paths.get("prepared_records_path"),
+        review_paths.get("review_summary_path"),
     )
 
     return (
-        "Review decision saved to the current review log and appended to review history.",
+        "Review decision, notes, and evidence checked were saved to the current review log and appended to review history.",
         review_paths["review_log_path"],
         review_paths["review_history_path"],
+        review_paths["review_summary_path"],
         *visual_bundle,
         *review_workspace,
         _queue_to_records(refreshed_queue_df),
         _queue_to_records(review_history_df),
+        _build_review_summary_preview(review_summary_df),
     )
 
 
@@ -1409,40 +1685,45 @@ def build_interface() -> gr.Blocks:
                                 gr.HTML("""
                                 <div class="module-intro">
                                   <div class="eyebrow">Controls</div>
-                                  <div class="module-intro-title">Queue Controls</div>
+                                  <div class="module-intro-title">Review Controls</div>
                                 </div>
                                 """)
                                 review_summary_html = gr.HTML(_build_summary_html(pd.DataFrame(), pd.DataFrame()))
                                 with gr.Group(elem_classes="queue-filter-grid"):
-                                    status_filter_input = gr.Dropdown(label="Status filter", choices=STATUS_FILTER_OPTIONS, value="All statuses")
-                                    type_filter_input = gr.Dropdown(label="Finding type", choices=list(TYPE_FILTER_MAP.keys()), value="All finding types")
-                                    search_text_input = gr.Textbox(label="Search queue", placeholder="Search by finding id, row number, or summary", lines=1, max_lines=1)
+                                    status_filter_input = gr.Dropdown(label="Review state filter", choices=STATUS_FILTER_OPTIONS, value="All review states")
+                                    type_filter_input = gr.Dropdown(label="Issue type", choices=list(TYPE_FILTER_MAP.keys()), value="All finding types")
+                                    search_text_input = gr.Textbox(label="Search review list", placeholder="Search by issue id, row number, or summary", lines=1, max_lines=1)
                                 filter_hint_html = gr.HTML(_build_filter_hint_html(pd.DataFrame(), pd.DataFrame(), ""))
                         with gr.Column(scale=9, elem_classes="review-flow-panel"):
                             with gr.Column(elem_classes=["panel", "active-finding-panel"]):
                                 gr.HTML("""
                                 <div class="module-intro">
                                   <div class="eyebrow">Selection</div>
-                                  <div class="module-intro-title">Active Finding</div>
+                                  <div class="module-intro-title">Active Issue</div>
                                 </div>
                                 """)
-                                finding_selector = gr.Dropdown(label="Open finding", choices=[], value=None)
+                                issue_selector = gr.Dropdown(label="Open issue", choices=[], value=None)
                                 header_html = gr.HTML(_build_header_html(None, 0, 0), visible=False)
                             row_preview_html = gr.HTML(_build_row_preview_html(None, None))
                             with gr.Column(elem_classes=["panel", "decision-panel"]):
                                 decision_input = gr.Radio(label="Review decision", choices=REVIEW_DECISION_OPTIONS, value="pending")
+                                evidence_checked_input = gr.Textbox(
+                                    label="Evidence checked",
+                                    placeholder="Example: Invoice INV-2045, source spreadsheet export, receipt image",
+                                    lines=2,
+                                )
                                 review_notes_input = gr.Textbox(
-                                    label="Reviewer notes",
-                                    placeholder="Explain why you confirmed, rejected, ignored, or left this item pending.",
+                                    label="Reviewer note",
+                                    placeholder="Explain the decision, any correction made, or why the issue was accepted, excluded, or escalated.",
                                     lines=4,
                                 )
                                 save_review_button = gr.Button("Save review decision", variant="primary")
                                 review_save_feedback = gr.Markdown("")
                             with gr.Accordion("Current record context", open=False, elem_classes="secondary-accordion"):
                                 record_context_html = gr.HTML(_build_record_context_html(None))
-                            with gr.Accordion("Reference and explanation", open=False, elem_classes="secondary-accordion"):
+                            with gr.Accordion("Issue explanation and review guidance", open=False, elem_classes="secondary-accordion"):
                                 explanation_html = gr.HTML(_build_explanation_html(None))
-                            with gr.Accordion("Visible queue", open=False, elem_classes="secondary-accordion"):
+                            with gr.Accordion("Visible review list", open=False, elem_classes="secondary-accordion"):
                                 review_queue_preview = gr.Dataframe(label="Visible queue", show_label=False, interactive=False, max_height=520, wrap=False)
                             with gr.Accordion("Saved review history", open=False, elem_classes="history-accordion"):
                                 review_history_preview = gr.Dataframe(label="Saved review history", show_label=False, interactive=False, max_height=260, wrap=False)
@@ -1480,9 +1761,11 @@ def build_interface() -> gr.Blocks:
                         issue_report_file = gr.File(label="Issue report", interactive=False)
                         review_log_file = gr.File(label="Review log", interactive=False)
                         review_history_file = gr.File(label="Review history", interactive=False)
+                        review_summary_file = gr.File(label="Review summary", interactive=False)
                         dataset_snapshot_file = gr.File(label="Dataset snapshot", interactive=False)
                         prepared_canonical_records_file = gr.File(label="Prepared canonical records", interactive=False)
                     issue_report_preview = gr.Dataframe(label="Explanation preview", interactive=False, max_height=420, wrap=True)
+                    review_summary_preview = gr.Dataframe(label="Review summary preview", interactive=False, max_height=180, wrap=True)
 
         ai_snapshot_state = gr.State(value=None)
         review_queue_state = gr.State(value=[])
@@ -1508,13 +1791,15 @@ def build_interface() -> gr.Blocks:
                 issue_report_file,
                 review_log_file,
                 review_history_file,
+                review_summary_file,
                 dataset_snapshot_file,
                 prepared_canonical_records_file,
                 issue_report_preview,
+                review_summary_preview,
                 status_filter_input,
                 type_filter_input,
                 search_text_input,
-                finding_selector,
+                issue_selector,
                 filter_hint_html,
                 review_queue_preview,
                 header_html,
@@ -1522,6 +1807,7 @@ def build_interface() -> gr.Blocks:
                 record_context_html,
                 explanation_html,
                 decision_input,
+                evidence_checked_input,
                 review_notes_input,
                 review_summary_html,
                 review_history_preview,
@@ -1531,12 +1817,12 @@ def build_interface() -> gr.Blocks:
             ],
         )
 
-        for trigger in [status_filter_input.change, type_filter_input.change, search_text_input.change, finding_selector.change]:
+        for trigger in [status_filter_input.change, type_filter_input.change, search_text_input.change, issue_selector.change]:
             trigger(
                 fn=refresh_review_workspace,
-                inputs=[finding_selector, status_filter_input, type_filter_input, search_text_input, review_queue_state, review_history_state, review_paths_state],
+                inputs=[issue_selector, status_filter_input, type_filter_input, search_text_input, review_queue_state, review_history_state, review_paths_state],
                 outputs=[
-                    finding_selector,
+                    issue_selector,
                     filter_hint_html,
                     review_queue_preview,
                     header_html,
@@ -1544,6 +1830,7 @@ def build_interface() -> gr.Blocks:
                     record_context_html,
                     explanation_html,
                     decision_input,
+                    evidence_checked_input,
                     review_notes_input,
                     review_summary_html,
                     review_history_preview,
@@ -1552,11 +1839,12 @@ def build_interface() -> gr.Blocks:
 
         save_review_button.click(
             fn=save_review_decision,
-            inputs=[finding_selector, decision_input, review_notes_input, status_filter_input, type_filter_input, search_text_input, review_queue_state, review_paths_state],
+            inputs=[issue_selector, decision_input, evidence_checked_input, review_notes_input, status_filter_input, type_filter_input, search_text_input, review_queue_state, review_paths_state],
             outputs=[
                 review_save_feedback,
                 review_log_file,
                 review_history_file,
+                review_summary_file,
                 dashboard_summary_html,
                 dashboard_highlights_html,
                 issue_type_counts_plot,
@@ -1565,7 +1853,7 @@ def build_interface() -> gr.Blocks:
                 anomaly_amount_plot,
                 priority_findings_preview,
                 anomaly_note_output,
-                finding_selector,
+                issue_selector,
                 filter_hint_html,
                 review_queue_preview,
                 header_html,
@@ -1573,11 +1861,13 @@ def build_interface() -> gr.Blocks:
                 record_context_html,
                 explanation_html,
                 decision_input,
+                evidence_checked_input,
                 review_notes_input,
                 review_summary_html,
                 review_history_preview,
                 review_queue_state,
                 review_history_state,
+                review_summary_preview,
             ],
         )
 

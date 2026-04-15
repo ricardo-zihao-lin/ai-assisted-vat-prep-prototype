@@ -11,7 +11,17 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-CANONICAL_COLUMNS = ["date", "description", "net_amount", "vat_amount", "category"]
+CANONICAL_COLUMNS = [
+    "date",
+    "invoice_reference",
+    "description",
+    "net_amount",
+    "vat_amount",
+    "gross_amount",
+    "counterparty_ref",
+    "document_reference",
+    "category",
+]
 REQUIRED_COLUMNS = ["date", "description", "net_amount", "vat_amount"]
 
 PREPARATION_STATUS_CANONICAL = "canonical"
@@ -20,9 +30,13 @@ PREPARATION_STATUS_UNSUPPORTED = "unsupported"
 
 HEADER_ALIASES = {
     "date": ["transaction_date", "invoice_date"],
+    "invoice_reference": ["invoice_no", "invoice_number", "invoice_id"],
     "description": ["details", "narrative"],
     "net_amount": ["net", "amount_ex_vat", "amount"],
     "vat_amount": ["vat", "tax_amount"],
+    "gross_amount": ["gross", "total_amount", "amount_inc_vat"],
+    "counterparty_ref": ["supplier_ref", "customer_ref", "counterparty", "supplier", "customer", "client_ref"],
+    "document_reference": ["document_id", "doc_ref", "evidence_reference", "receipt_reference"],
     "category": ["type"],
 }
 
@@ -97,6 +111,8 @@ def prepare_input_dataframe(dataframe: pd.DataFrame) -> PreparationResult:
             prepared_columns[canonical_field] = dataframe[source_column]
 
     prepared_dataframe = pd.DataFrame(prepared_columns, index=dataframe.index).reindex(columns=CANONICAL_COLUMNS)
+    prepared_dataframe.attrs["source_mapping"] = mapping
+    prepared_dataframe.attrs["canonical_columns"] = tuple(CANONICAL_COLUMNS)
 
     if all(mapping.get(column_name) == column_name for column_name in CANONICAL_COLUMNS):
         return PreparationResult(

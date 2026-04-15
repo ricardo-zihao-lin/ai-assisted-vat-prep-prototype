@@ -2,9 +2,56 @@
 
 ## Overview
 
-This repository contains a local-first Python research prototype for spreadsheet-based VAT records preparation in a UK Making Tax Digital context. The current codebase is organised around one shared Python core and several thin deployment shells.
+This repository contains a local-first Python research prototype for spreadsheet-based VAT records preparation in a UK Making Tax Digital context. The project is now positioned as a human-in-the-loop pre-submission VAT record review and correction support tool rather than a generic data-cleaning utility. The current codebase is organised around one shared Python core and several thin deployment shells.
 
 The shared core remains in `pipeline.py` and related modules. The deployment entry points only handle launch, packaging, containerisation, and delivery. They do not own the business logic, and they do not couple evaluation code into each deployment route.
+
+## Current Project Direction
+
+The prototype is intended to help spreadsheet-using businesses review records before VAT submission by:
+
+- identifying records that may be non-compliant, potentially non-compliant, or require manual review
+- explaining why flagged records matter in a VAT / MTD record-preparation context
+- prioritising review attention using transparent risk-oriented outputs
+- supporting structured, evidence-based manual review with decision logging
+
+The system does not replace user judgement. Its role is to surface record issues, interpret likely review significance, and support traceable pre-submission checking.
+
+## System Boundary
+
+This prototype is intentionally bounded. It is:
+
+- local-first
+- human-in-the-loop
+- rule-driven and explanation-oriented
+- focused on record review before VAT submission
+
+It is not:
+
+- a full accounting platform
+- an HMRC submission client
+- an automatic VAT filing system
+- a late submission or late payment penalty tool
+- a source of final legal or professional tax advice
+- a guarantee of full compliance
+
+## Target Workflow
+
+The intended end-to-end workflow is:
+
+```text
+spreadsheet input
+-> data standardisation
+-> deterministic validation and risk checks
+-> VAT / MTD-oriented issue categorisation
+-> status and risk assignment
+-> explanation of why the issue matters
+-> recommended manual review action
+-> human decision logging
+-> pre-submission review summary
+```
+
+This means the prototype should be understood as a review-support system. Detection remains important, but the user-facing value comes from interpretation, prioritisation, and traceable manual review.
 
 ## Current Architecture
 
@@ -16,7 +63,7 @@ The project now follows a simplified "same Python core + five entry points" stru
 4. PyInstaller for the Windows distributable demo package
 5. A limited web demo deployment path based on the same GUI service
 
-Core workflow:
+Core processing workflow:
 
 ```text
 spreadsheet input
@@ -27,6 +74,8 @@ spreadsheet input
 -> review queue
 -> exported CSV artefacts
 ```
+
+Target product workflow and system boundary are documented in [docs/project_direction.md](docs/project_direction.md).
 
 ## Current Status Of The Five Entry Points
 

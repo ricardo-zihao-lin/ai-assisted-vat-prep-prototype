@@ -9,11 +9,25 @@ import pandas as pd
 from pipeline import RunResult, STATUS_COMPLETED, STATUS_STOPPED_AFTER_REPORTING
 
 ISSUE_TYPE_LABELS = {
-    "missing_value": "missing values",
-    "duplicate_row": "duplicate rows",
+    "missing_transaction_date": "missing transaction dates",
+    "missing_net_amount": "missing net amounts",
+    "missing_vat_amount": "missing VAT amounts",
+    "missing_required_review_field": "missing review fields",
+    "exact_duplicate_row": "exact duplicate rows",
+    "duplicate_invoice_reference": "duplicate invoice references",
     "invalid_date_format": "dates that could not be read",
-    "invalid_numeric_format": "amounts that could not be read as numbers",
-    "anomaly": "unusual net amount values",
+    "non_numeric_net_amount": "net amounts that could not be read as numbers",
+    "non_numeric_vat_amount": "VAT amounts that could not be read as numbers",
+    "blank_description": "blank descriptions",
+    "inconsistent_totals": "inconsistent total amounts",
+    "missing_counterparty_reference": "missing counterparty references",
+    "missing_evidence_reference": "missing evidence references",
+    "missing_transaction_category_support_field": "missing transaction category support fields",
+    "unusual_net_amount": "unusual net amount values",
+    "negative_or_unusually_low_net_amount": "negative or unusually low net amounts",
+    "suspicious_zero_value_amount_combination": "suspicious zero-value amount combinations",
+    "conflicting_amount_sign_pattern": "conflicting amount sign patterns",
+    "missing_column": "missing required columns",
 }
 
 
@@ -96,17 +110,26 @@ def _build_next_steps(issue_report_df: pd.DataFrame, run_result: RunResult) -> s
     issue_types = set(issue_report_df.get("issue_type", pd.Series(dtype="object")).dropna().astype(str))
     next_steps: list[str] = []
 
-    if "missing_value" in issue_types:
+    if {"missing_transaction_date", "missing_net_amount", "missing_vat_amount", "missing_required_review_field"} & issue_types:
         next_steps.append("- Check whether blank cells in the source spreadsheet should be completed.")
     if "invalid_date_format" in issue_types:
         next_steps.append("- Check dates that were not in a readable format.")
-    if "invalid_numeric_format" in issue_types:
+    if {"non_numeric_net_amount", "non_numeric_vat_amount"} & issue_types:
         next_steps.append("- Check amount fields that could not be read as numbers.")
-    if "duplicate_row" in issue_types:
+    if {"exact_duplicate_row", "duplicate_invoice_reference"} & issue_types:
         next_steps.append("- Review repeated rows to confirm whether they are genuine repeats or accidental duplicates.")
-    if "anomaly" in issue_types:
+    if {"inconsistent_totals", "conflicting_amount_sign_pattern"} & issue_types:
+        next_steps.append("- Check whether related amount fields agree arithmetically and follow a coherent sign pattern.")
+    if {"missing_counterparty_reference", "missing_evidence_reference"} & issue_types:
+        next_steps.append("- Add enough reference and evidence detail for the record to remain traceable during review.")
+    review_signal_types = {
+        "unusual_net_amount",
+        "negative_or_unusually_low_net_amount",
+        "suspicious_zero_value_amount_combination",
+    }
+    if review_signal_types & issue_types:
         next_steps.append(
-            "- Review unusual net amount values against the underlying records. These flags are prompts for review rather than proof of error."
+            "- Review amount-based signals against the underlying records. These flags are prompts for review rather than proof of error."
         )
 
     if not next_steps:

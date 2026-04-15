@@ -22,7 +22,7 @@ def main() -> None:
     dataframe = load_spreadsheet(DATASET_PATH)
     anomaly_results = detect_anomalies(dataframe, column="net_amount", method="iqr")
 
-    if anomaly_results.empty:
+    if not anomaly_results:
         raise ValueError("No anomalies were returned for synthetic_eval_case_a.csv.")
 
     plotting_frame = dataframe.copy()
@@ -30,12 +30,13 @@ def main() -> None:
     plotting_frame["net_amount_numeric"] = pd.to_numeric(plotting_frame["net_amount"], errors="coerce")
     plotting_frame = plotting_frame.dropna(subset=["net_amount_numeric"]).copy()
 
-    anomaly_indices = set(anomaly_results["row_index"].tolist())
+    anomaly_indices = {issue.row_index for issue in anomaly_results if issue.row_index is not None}
     normal_rows = plotting_frame[~plotting_frame["row_index"].isin(anomaly_indices)]
     anomaly_rows = plotting_frame[plotting_frame["row_index"].isin(anomaly_indices)]
 
-    lower_bound = float(anomaly_results["lower_bound"].iloc[0])
-    upper_bound = float(anomaly_results["upper_bound"].iloc[0])
+    expected_bounds = anomaly_results[0].expected_value or {}
+    lower_bound = float(expected_bounds["lower_bound"])
+    upper_bound = float(expected_bounds["upper_bound"])
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.scatter(

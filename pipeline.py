@@ -46,6 +46,7 @@ class RunResult:
     issue_report_path: str | None
     review_log_path: str | None
     review_history_path: str | None
+    review_summary_path: str | None
 
 
 def run_pipeline(input_path: str, output_dir: str) -> RunResult:
@@ -86,6 +87,7 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
             issue_report_path=None,
             review_log_path=None,
             review_history_path=None,
+            review_summary_path=None,
         )
 
     prepared_dataframe = preparation_result.prepared_dataframe
@@ -104,6 +106,7 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
         review_log=EMPTY_REVIEW_LOG.copy(),
         review_history=EMPTY_REVIEW_HISTORY.copy(),
         output_dir=resolved_output_dir,
+        source_filename=resolved_input_path.name,
     )
 
     findings_pending_review = validation_results["issue_count"] > 0 or len(anomaly_results) > 0
@@ -131,4 +134,5 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
         issue_report_path=str(exported_files["issue_report"]),
         review_log_path=str(exported_files["review_log"]),
         review_history_path=str(exported_files["review_history"]),
+        review_summary_path=str(exported_files["review_summary"]),
     )

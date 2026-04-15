@@ -18,7 +18,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from anomaly.anomaly_detector import detect_anomalies
 from ingestion.loader import load_spreadsheet
-from review.review_manager import ReviewManager
 from validation.validator import validate_vat_data
 
 DATASET_PATHS = [
@@ -42,11 +41,10 @@ def summarise_dataset(dataset_path: Path) -> dict:
     validation_results = validate_vat_data(dataframe)
     anomaly_results = detect_anomalies(dataframe, column="net_amount", method="iqr")
 
-    review_items = validation_results["issues"] + anomaly_results.to_dict(orient="records")
-    review_log = ReviewManager().review_issues(review_items)
+    review_items = validation_results["issues"] + anomaly_results
 
     issue_type_counts = {
-        f"count_{issue_type}": sum(1 for issue in validation_results["issues"] if issue["issue_type"] == issue_type)
+        f"count_{issue_type}": sum(1 for issue in validation_results["issues"] if issue.issue_type == issue_type)
         for issue_type in ISSUE_TYPES
     }
 
@@ -58,9 +56,9 @@ def summarise_dataset(dataset_path: Path) -> dict:
         "count_anomaly": len(anomaly_results),
         "review_item_count": len(review_items),
         "has_review_relevant_flags": bool(review_items),
-        "has_reject_decision": bool((review_log["decision"] == "reject").any()),
-        "has_confirm_decision": bool((review_log["decision"] == "confirm").any()),
-        "has_ignore_decision": bool((review_log["decision"] == "ignore").any()),
+        "has_reject_decision": False,
+        "has_confirm_decision": False,
+        "has_ignore_decision": False,
     }
 
 

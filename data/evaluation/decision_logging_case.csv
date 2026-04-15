@@ -1,0 +1,9 @@
+date,description,net_amount,vat_amount,category
+2026-06-01,Office rent,950.00,190.00,Office
+2026-06-02,,180.00,36.00,Sales
+2026-06-33,Invalid date follow-up,220.00,44.00,Sales
+2026-06-04,Large one-off equipment,24000.00,4800.00,Equipment
+2026-06-05,Numeric correction needed,unknown,10.00,Sales
+2026-06-06,Duplicate service charge,400.00,80.00,Services
+2026-06-06,Duplicate service charge,400.00,80.00,Services
+

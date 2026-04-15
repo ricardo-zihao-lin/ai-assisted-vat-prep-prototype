@@ -1,0 +1,9 @@
+date,description,net_amount,vat_amount,category
+2026-04-01,Office supplies,120.00,24.00,Office
+,Missing date example,55.00,11.00,Office
+2026-04-32,Invalid date example,80.00,16.00,Travel
+2026-04-04,Missing net amount,,20.00,Software
+2026-04-05,Invalid net amount,not_numeric,18.00,Sales
+2026-04-06,Duplicate baseline,300.00,60.00,Sales
+2026-04-06,Duplicate baseline,300.00,60.00,Sales
+

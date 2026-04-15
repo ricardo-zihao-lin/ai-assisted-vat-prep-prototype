@@ -7,25 +7,69 @@ the underlying financial entries are never altered automatically.
 """
 
 import logging
+from typing import Any
 
 import pandas as pd
 
+from review.issue_interpreter import RawIssueSignal, interpret_signal
+from review.models import Issue
+
 LOGGER = logging.getLogger(__name__)
-EMPTY_ANOMALY_RESULT = pd.DataFrame(
-    columns=[
-        "row_index",
-        "checked_column",
-        "observed_value",
-        "anomaly_score",
-        "lower_bound",
-        "upper_bound",
-        "reason",
-        "method",
-    ]
-)
+EMPTY_ANOMALY_RESULT: list[Issue] = []
+MAX_ANOMALY_FLAGS = 50
+ANOMALY_RATIO_CAP = 0.02
 
 
-def detect_anomalies(dataframe: pd.DataFrame, column: str = "net_amount", method: str = "iqr") -> pd.DataFrame:
+def _normalise_scalar(value: Any) -> Any:
+    if value is None or pd.isna(value):
+        return None
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except ValueError:
+            return value
+    return value
+
+
+def _build_source_snapshot(dataframe: pd.DataFrame, row_index: int) -> dict[str, Any] | None:
+    if row_index not in dataframe.index:
+        return None
+    row = dataframe.loc[row_index]
+    return {column: _normalise_scalar(value) for column, value in row.items()}
+
+
+def _build_anomaly_issue(
+    dataframe: pd.DataFrame,
+    row_index: int,
+    column: str,
+    observed_value: Any,
+    anomaly_score: float,
+    lower_bound: float,
+    upper_bound: float,
+    method: str,
+) -> Issue:
+    """Create one interpreted issue object for an unusual transaction."""
+    return interpret_signal(
+        RawIssueSignal(
+            rule_id="VR015",
+            row_index=row_index,
+            issue_type="unusual_net_amount",
+            category="Unusual transaction review",
+            field_names=(column,),
+            detected_value=_normalise_scalar(observed_value),
+            expected_value={
+                "lower_bound": float(lower_bound),
+                "upper_bound": float(upper_bound),
+                "method": method,
+                "anomaly_score": float(anomaly_score),
+            },
+            evidence_expected="Invoice, receipt, or supporting transaction evidence",
+            source_snapshot=_build_source_snapshot(dataframe, row_index),
+        )
+    )
+
+
+def detect_anomalies(dataframe: pd.DataFrame, column: str = "net_amount", method: str = "iqr") -> list[Issue]:
     """Rank suspicious transactions using a simple univariate method.
 
     Parameters
@@ -40,10 +84,10 @@ def detect_anomalies(dataframe: pd.DataFrame, column: str = "net_amount", method
 
     Returns
     -------
-    pandas.DataFrame
-        DataFrame containing suspicious rows sorted by anomaly score in
-        descending order. An empty DataFrame is returned when no anomalies can
-        be identified.
+    list[Issue]
+        Structured issue objects representing suspicious rows sorted by
+        anomaly score in descending order. An empty list is returned when no
+        anomalies can be identified.
 
     Notes
     -----
@@ -115,6 +159,28 @@ def detect_anomalies(dataframe: pd.DataFrame, column: str = "net_amount", method
         return EMPTY_ANOMALY_RESULT.copy()
 
     suspicious_rows = suspicious_rows.sort_values("anomaly_score", ascending=False)
-    LOGGER.info("Anomaly detection produced %s suspicious rows", len(suspicious_rows))
+    anomaly_limit = min(MAX_ANOMALY_FLAGS, max(10, int(len(valid_rows) * ANOMALY_RATIO_CAP)))
+    if len(suspicious_rows) > anomaly_limit:
+        LOGGER.info(
+            "Anomaly detection produced %s suspicious rows for %s, keeping the top %s most severe items for review usability",
+            len(suspicious_rows),
+            column,
+            anomaly_limit,
+        )
+        suspicious_rows = suspicious_rows.head(anomaly_limit).copy()
+    else:
+        LOGGER.info("Anomaly detection produced %s suspicious rows", len(suspicious_rows))
     LOGGER.debug("Top anomaly rows: %s", suspicious_rows["row_index"].tolist())
-    return suspicious_rows
+    return [
+        _build_anomaly_issue(
+            dataframe=dataframe,
+            row_index=int(row.row_index),
+            column=column,
+            observed_value=row.observed_value,
+            anomaly_score=float(row.anomaly_score),
+            lower_bound=float(row.lower_bound),
+            upper_bound=float(row.upper_bound),
+            method=str(row.method),
+        )
+        for row in suspicious_rows.itertuples(index=False)
+    ]

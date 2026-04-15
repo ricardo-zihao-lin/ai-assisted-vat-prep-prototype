@@ -56,6 +56,7 @@ def _print_run_summary(result) -> None:
     print(f"issue_report: {result.issue_report_path}")
     print(f"review_log: {result.review_log_path}")
     print(f"review_history: {result.review_history_path}")
+    print(f"review_summary: {result.review_summary_path}")
 
 
 def main(argv: list[str] | None = None) -> int:
