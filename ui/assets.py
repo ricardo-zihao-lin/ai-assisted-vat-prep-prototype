@@ -8,12 +8,14 @@ from .constants import APP_MODE_PUBLIC_DEMO, PUBLIC_DEMO_PRIVACY_NOTE
 def build_custom_css() -> str:
     return """
     :root {
-      --app-panel-bg: rgba(255, 255, 255, 0.92);
-      --app-card-bg: rgba(248, 250, 252, 0.96);
-      --app-soft-bg: rgba(241, 245, 249, 0.96);
-      --app-overlay-bg: rgba(226, 232, 240, 0.48);
-      --app-input-bg: rgba(255, 255, 255, 0.98);
-      --app-input-soft-bg: rgba(248, 250, 252, 0.96);
+      color-scheme: light;
+      --app-body-bg: #f4f7fb;
+      --app-panel-bg: rgba(255, 255, 255, 0.96);
+      --app-card-bg: rgba(248, 250, 252, 0.98);
+      --app-soft-bg: rgba(241, 245, 249, 0.92);
+      --app-overlay-bg: rgba(226, 232, 240, 0.42);
+      --app-input-bg: rgba(255, 255, 255, 1);
+      --app-input-soft-bg: rgba(248, 250, 252, 0.98);
       --app-table-bg: #f8fafc;
       --app-table-alt-odd: #f8fafc;
       --app-table-alt-even: #eef2ff;
@@ -28,26 +30,34 @@ def build_custom_css() -> str:
       --app-text-muted: #334155;
       --app-text-soft: #475569;
       --app-text-label: #64748b;
-      --app-border: rgba(148, 163, 184, 0.28);
-      --app-border-strong: rgba(148, 163, 184, 0.34);
-      --app-shadow-lg: 0 18px 48px rgba(148, 163, 184, 0.18);
-      --app-shadow-md: 0 14px 36px rgba(148, 163, 184, 0.14);
+      --app-border: rgba(148, 163, 184, 0.22);
+      --app-border-strong: rgba(148, 163, 184, 0.3);
+      --app-shadow-lg: 0 18px 40px rgba(148, 163, 184, 0.16);
+      --app-shadow-md: 0 12px 28px rgba(148, 163, 184, 0.12);
       --app-alert-bg: linear-gradient(180deg, rgba(254, 242, 242, 0.98), rgba(255, 241, 242, 0.96));
-      --app-alert-border: rgba(248, 113, 113, 0.32);
+      --app-alert-border: rgba(248, 113, 113, 0.28);
       --app-alert-title: #b91c1c;
       --app-alert-body: #7f1d1d;
       --app-alert-impact: #991b1b;
-      --app-tab-bg: rgba(255, 255, 255, 0.96);
-      --app-tab-hover-bg: rgba(239, 246, 255, 0.98);
-      --app-tab-selected-bg: rgba(224, 231, 255, 0.92);
-      --app-tab-selected-border: rgba(99, 102, 241, 0.35);
-      --app-tab-selected-accent: #6366f1;
+      --app-tab-bg: rgba(255, 255, 255, 0.92);
+      --app-tab-hover-bg: rgba(238, 242, 255, 0.94);
+      --app-tab-selected-bg: rgba(79, 70, 229, 0.18);
+      --app-tab-selected-border: rgba(79, 70, 229, 0.42);
+      --app-tab-selected-accent: #4f46e5;
+      --app-tab-selected-text: #ffffff;
+      --app-tab-focus-ring: rgba(79, 70, 229, 0.18);
       --app-accordion-bg: rgba(248, 250, 252, 0.98);
       --app-accordion-hover-bg: rgba(239, 246, 255, 0.98);
-      --app-divider-shadow: rgba(255,255,255,0);
+      --app-divider-shadow: rgba(15,23,42,0.03);
+      --app-accent: #4f46e5;
+      --app-accent-hover: #4338ca;
+      --app-accent-contrast: #eef2ff;
+      --app-primary-gradient: linear-gradient(135deg, #4f46e5, #6366f1);
+      --app-primary-shadow: 0 10px 22px rgba(79, 70, 229, 0.22);
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
+    .dark, .dark body, .dark .gradio-container {
+        color-scheme: dark;
+        --app-body-bg: #0b1220;
         --app-panel-bg: rgba(20, 30, 48, 0.9);
         --app-card-bg: rgba(32, 45, 68, 0.94);
         --app-soft-bg: rgba(15, 23, 42, 0.48);
@@ -79,19 +89,31 @@ def build_custom_css() -> str:
         --app-alert-impact: #fecdd3;
         --app-tab-bg: rgba(20, 30, 48, 0.88);
         --app-tab-hover-bg: rgba(32, 45, 68, 0.82);
-        --app-tab-selected-bg: rgba(79, 70, 229, 0.22);
+        --app-tab-selected-bg: rgba(79, 70, 229, 0.3);
         --app-tab-selected-border: rgba(124, 131, 255, 0.45);
         --app-tab-selected-accent: #7c83ff;
+        --app-tab-selected-text: #ffffff;
+        --app-tab-focus-ring: rgba(124, 131, 255, 0.2);
         --app-accordion-bg: rgba(32, 45, 68, 0.94);
         --app-accordion-hover-bg: rgba(38, 54, 82, 0.96);
         --app-divider-shadow: rgba(255,255,255,0.03);
-      }
+        --app-accent: #6366f1;
+        --app-accent-hover: #7c83ff;
+        --app-accent-contrast: #eef2ff;
+        --app-primary-gradient: linear-gradient(135deg, #4f46e5, #6366f1);
+        --app-primary-shadow: 0 12px 26px rgba(79, 70, 229, 0.3);
     }
+    body { background: var(--app-body-bg) !important; color: var(--app-text-main) !important; }
+    .gradio-container { background: var(--app-body-bg); color: var(--app-text-main); }
     .workspace-root { max-width: 1480px; margin: 0 auto; padding: 20px 0 36px; color: var(--app-text-main); }
     .panel { background: var(--app-panel-bg); border: 1px solid var(--app-border-strong); border-radius: 18px; padding: 18px; box-shadow: var(--app-shadow-lg); }
     .hero-card, .summary-card, .row-preview-card, .context-card, .dashboard-shell, .action-card, .reference-card { background: var(--app-card-bg); border: 1px solid var(--app-border); border-radius: 18px; padding: 18px; box-shadow: var(--app-shadow-md); }
     .hero-title { font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
     .hero-subtitle { margin-top: 8px; font-size: 1rem; color: var(--app-text-main); }
+    .welcome-project-link { margin: 12px 0 6px; font-size: 1.35rem; font-weight: 700; line-height: 1.3; }
+    .welcome-project-link a { color: var(--app-accent); text-decoration: underline; text-underline-offset: 3px; }
+    .welcome-project-link a:hover { color: var(--app-accent-hover); }
+    .welcome-project-meta { margin: 0 0 16px; color: var(--app-text-soft); font-size: 1rem; line-height: 1.5; }
     .eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: .72rem; color: var(--app-text-label); margin-bottom: 8px; }
     .hero-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
     .hero-badges { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -101,13 +123,13 @@ def build_custom_css() -> str:
     .hero-alert-body { color: var(--app-alert-body); font-size: .98rem; line-height: 1.5; }
     .hero-alert-impact { margin-top: 8px; color: var(--app-alert-impact); font-size: .92rem; line-height: 1.45; }
     .badge { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; }
-    .badge-pending { background: rgba(96, 165, 250, 0.15); color: #bfdbfe; }
-    .badge-confirm { background: rgba(34, 197, 94, 0.15); color: #bbf7d0; }
-    .badge-reject { background: rgba(248, 113, 113, 0.16); color: #fecaca; }
-    .badge-ignore { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; }
-    .badge-anomaly { background: rgba(245, 158, 11, 0.16); color: #fde68a; }
-    .badge-data { background: rgba(244, 114, 182, 0.14); color: #fbcfe8; }
-    .badge-neutral { background: rgba(148, 163, 184, 0.16); color: #e2e8f0; }
+    .badge-pending { background: rgba(96, 165, 250, 0.14); color: var(--app-accent); }
+    .badge-confirm { background: rgba(34, 197, 94, 0.14); color: #16a34a; }
+    .badge-reject { background: rgba(248, 113, 113, 0.14); color: #dc2626; }
+    .badge-ignore { background: rgba(148, 163, 184, 0.14); color: var(--app-text-soft); }
+    .badge-anomaly { background: rgba(245, 158, 11, 0.14); color: #d97706; }
+    .badge-data { background: rgba(14, 165, 233, 0.12); color: #0284c7; }
+    .badge-neutral { background: rgba(148, 163, 184, 0.14); color: var(--app-text-soft); }
     .summary-title, .row-preview-title, .context-title, .action-title, .reference-title { font-size: 1.02rem; font-weight: 700; margin-bottom: 12px; }
     .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .summary-inline-card { padding: 14px 16px; }
@@ -161,9 +183,12 @@ def build_custom_css() -> str:
     .secondary-accordion { margin-top: 12px; }
     .gradio-container .tab-wrapper, .gradio-container .tabs { border-bottom: 1px solid var(--app-border); margin-bottom: 18px; padding-bottom: 12px; box-shadow: inset 0 -1px 0 var(--app-divider-shadow); }
     .gradio-container .tab-nav { gap: 8px; padding: 6px; background: var(--app-tab-bg); border: 1px solid var(--app-border); border-radius: 16px; display: inline-flex; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
-    .gradio-container .tab-nav button, .gradio-container button[role="tab"] { position: relative; padding: 10px 16px; border-radius: 12px; border: 1px solid transparent; color: var(--app-text-muted); background: transparent; }
-    .gradio-container .tab-nav button:hover, .gradio-container button[role="tab"]:hover { background: var(--app-tab-hover-bg); color: var(--app-text-strong); border-color: var(--app-border); }
-    .gradio-container .tab-nav button.selected, .gradio-container button[role="tab"][aria-selected="true"] { background: var(--app-tab-selected-bg); color: var(--app-text-strong); border-color: var(--app-tab-selected-border); box-shadow: inset 0 -2px 0 var(--app-tab-selected-accent), 0 0 0 1px rgba(255,255,255,0.03); }
+    .gradio-container .tab-nav button, .gradio-container button[role="tab"] { position: relative; padding: 10px 16px; border-radius: 12px; border: 1px solid transparent; color: var(--app-text-muted) !important; background: transparent !important; font-weight: 600; box-shadow: none; }
+    .gradio-container .tab-nav button:hover, .gradio-container button[role="tab"]:hover { background: var(--app-tab-hover-bg) !important; color: var(--app-text-strong) !important; border-color: transparent; }
+    .gradio-container .tab-nav button:focus-visible, .gradio-container button[role="tab"]:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--app-tab-focus-ring); }
+    .gradio-container .tab-nav button.selected, .gradio-container button[role="tab"][aria-selected="true"] { background: var(--app-tab-selected-bg) !important; color: var(--app-tab-selected-text) !important; border-color: var(--app-tab-selected-border) !important; box-shadow: inset 0 -2px 0 var(--app-tab-selected-accent), 0 8px 18px rgba(79, 70, 229, 0.14) !important; }
+    .gradio-container .tab-nav button.selected *, .gradio-container button[role="tab"][aria-selected="true"] * { color: var(--app-tab-selected-text) !important; }
+    .gradio-container .tab-nav button:not(.selected), .gradio-container button[role="tab"][aria-selected="false"] { opacity: 0.88; }
     .gradio-container button, .gradio-container [role="button"] { transition: background .18s ease, border-color .18s ease, box-shadow .18s ease; }
     .gradio-container .secondary-accordion button, .gradio-container .history-accordion button, .gradio-container .accordion button { background: var(--app-accordion-bg); border: 1px solid var(--app-border-strong); color: var(--app-text-strong); box-shadow: 6px 6px 14px rgba(5,10,22,0.18), -3px -3px 10px rgba(255,255,255,0.02); }
     .gradio-container .secondary-accordion button:hover, .gradio-container .history-accordion button:hover, .gradio-container .accordion button:hover { border-color: rgba(96, 165, 250, 0.42); background: var(--app-accordion-hover-bg); }
@@ -174,6 +199,23 @@ def build_custom_css() -> str:
     .gradio-container .queue-filter-grid > *:first-child .wrap, .gradio-container .queue-filter-grid > *:first-child .form { border-top: none; padding-top: 0; }
     .gradio-container .queue-filter-grid button, .gradio-container .queue-filter-grid input, .gradio-container .queue-filter-grid textarea { border: 1px solid var(--app-border-strong); background: var(--app-input-bg); color: var(--app-text-strong); }
     .gradio-container .queue-filter-grid button:hover, .gradio-container .queue-filter-grid input:hover, .gradio-container .queue-filter-grid textarea:hover { border-color: rgba(96, 165, 250, 0.4); }
+    .gradio-container input, .gradio-container textarea, .gradio-container select { background: var(--app-input-bg); color: var(--app-text-strong); border-color: var(--app-border-strong); }
+    .gradio-container input::placeholder, .gradio-container textarea::placeholder { color: var(--app-text-label); }
+    .gradio-container button.primary, .gradio-container .primary {
+      background: var(--app-primary-gradient) !important;
+      color: var(--app-accent-contrast) !important;
+      border: 1px solid transparent !important;
+      box-shadow: var(--app-primary-shadow);
+    }
+    .gradio-container button.primary:hover, .gradio-container .primary:hover {
+      filter: brightness(1.04);
+      box-shadow: 0 14px 28px rgba(79, 70, 229, 0.28);
+    }
+    .gradio-container .secondary, .gradio-container button.secondary {
+      background: var(--app-soft-bg) !important;
+      color: var(--app-text-strong) !important;
+      border: 1px solid var(--app-border) !important;
+    }
     .gradio-container .queue-filter-grid label, .gradio-container .decision-panel label { color: var(--app-text-main); }
     .gradio-container .queue-filter-grid textarea, .gradio-container .queue-filter-grid input[type="text"] { min-height: 48px !important; height: 48px !important; line-height: 1.35; padding-top: 12px; padding-bottom: 12px; resize: none; overflow: hidden; }
     .gradio-container .queue-filter-grid textarea::placeholder, .gradio-container .queue-filter-grid input[type="text"]::placeholder { color: var(--app-text-label); }
@@ -184,6 +226,11 @@ def build_custom_css() -> str:
     .gradio-container .decision-panel .wrap label { padding: 6px 10px; border-right: 1px solid var(--app-border); }
     .gradio-container .decision-panel .wrap label:last-child { border-right: none; }
     .gradio-container .decision-panel .wrap label:hover { background: rgba(79, 70, 229, 0.12); }
+    .gradio-container .decision-panel .wrap label:has(input:checked) {
+      background: var(--app-tab-selected-bg);
+      color: var(--app-tab-selected-text);
+      box-shadow: inset 0 0 0 1px var(--app-tab-selected-border);
+    }
     .inline-icon { display: inline-flex; width: 16px; height: 16px; margin-right: 8px; flex: 0 0 16px; vertical-align: -3px; }
     .inline-icon svg { width: 16px; height: 16px; }
     .title-with-icon { display: inline-flex; align-items: center; gap: 8px; }
@@ -212,6 +259,8 @@ def build_custom_css() -> str:
       .reference-summary { flex-direction: column; align-items: flex-start; }
       .review-flow-panel { border-left: none; padding-left: 0; }
       .insight-shell-header { flex-direction: column; }
+      .welcome-project-link { font-size: 1.15rem; }
+      .welcome-project-meta { font-size: .96rem; }
     }
     @media (min-width: 961px) {
       .queue-filter-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
@@ -229,6 +278,8 @@ def build_heading(app_mode: str) -> str:
 def build_welcome_markdown(app_mode: str) -> str:
     return (
         "This local-first prototype helps you analyse VAT-related spreadsheets, explain why records were flagged, and record a human review trail.\n\n"
+        '<div class="welcome-project-link"><a href="https://github.com/ricardo-zihao-lin/ai-assisted-vat-prep-prototype" target="_blank" rel="noopener noreferrer">AI-Assisted VAT Prep Prototype @ GitHub</a></div>\n'
+        '<div class="welcome-project-meta">Zihao Lin | Undergraduate Final Year Project | University of Huddersfield, UK</div>\n\n'
         "**Built with Gradio**\n"
         "- Browser UI shell: Gradio\n"
         "- Tabular processing: pandas\n"
@@ -258,35 +309,3 @@ def build_theme() -> gr.themes.Theme:
         spacing_size="lg",
         font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
     )
-
-
-def build_custom_css() -> str:
-    return """
-    .workspace-root { max-width: 1480px; margin: 0 auto; padding: 20px 0 36px; }
-    .panel, .hero-card, .summary-card, .row-preview-card, .dashboard-shell, .insight-shell, .action-card, .reference-card {
-      border: 1px solid rgba(148, 163, 184, 0.26);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.94);
-      box-shadow: 0 12px 32px rgba(148, 163, 184, 0.12);
-    }
-    .hero-title, .dashboard-title { font-weight: 700; }
-    .badge { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; }
-    .badge-pending { background: rgba(96, 165, 250, 0.15); color: #2563eb; }
-    .badge-confirm { background: rgba(34, 197, 94, 0.15); color: #15803d; }
-    .badge-reject { background: rgba(248, 113, 113, 0.16); color: #b91c1c; }
-    .badge-ignore { background: rgba(148, 163, 184, 0.16); color: #475569; }
-    .badge-anomaly { background: rgba(245, 158, 11, 0.16); color: #b45309; }
-    .badge-data { background: rgba(244, 114, 182, 0.14); color: #be185d; }
-    .badge-neutral { background: rgba(148, 163, 184, 0.16); color: #475569; }
-    .context-table, .row-preview-table { width: 100%; border-collapse: collapse; }
-    .context-table th, .context-table td, .row-preview-table th, .row-preview-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.24); vertical-align: top; }
-    .current-row td { background: rgba(224, 231, 255, 0.85) !important; }
-    .flagged-cell { background: rgba(219, 234, 254, 0.95) !important; font-weight: 700; }
-    .metric-strip, .dashboard-kpi-grid, .detail-grid, .insight-grid { display: grid; gap: 12px; }
-    .metric-strip, .detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dashboard-kpi-grid, .insight-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    @media (max-width: 960px) {
-      .metric-strip, .detail-grid, .dashboard-kpi-grid, .insight-grid { grid-template-columns: 1fr; }
-      .hero-row, .dashboard-title-row, .insight-shell-header { flex-direction: column; }
-    }
-    """
