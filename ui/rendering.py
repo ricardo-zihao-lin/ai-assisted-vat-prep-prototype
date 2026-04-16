@@ -12,6 +12,7 @@ from .constants import (
     DASHBOARD_PRIORITY_COLUMNS,
     DECISION_SORT_RANK,
     DOWNLOAD_PREVIEW_COLUMNS,
+    FINDINGS_SUMMARY_PREVIEW_COLUMNS,
     ISSUE_TYPE_SORT_RANK,
     QUEUE_PREVIEW_COLUMNS,
     REVIEW_CONTEXT_COLUMNS,
@@ -534,6 +535,12 @@ def _build_review_summary_preview(review_summary_df: pd.DataFrame) -> pd.DataFra
             "summary_note",
         ]
     ).head(1)
+
+
+def _build_findings_summary_preview(findings_summary_df: pd.DataFrame) -> pd.DataFrame:
+    if findings_summary_df.empty:
+        return pd.DataFrame(columns=FINDINGS_SUMMARY_PREVIEW_COLUMNS)
+    return findings_summary_df.reindex(columns=FINDINGS_SUMMARY_PREVIEW_COLUMNS).head(20)
 
 
 def _queue_to_records(review_queue_df: pd.DataFrame) -> list[dict]:

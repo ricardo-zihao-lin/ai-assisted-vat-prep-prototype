@@ -23,7 +23,7 @@ from ai.prompts import DEFAULT_EDITABLE_EXPLANATION_PROMPT
 from ai.snapshot_builder import build_issue_snapshot
 from ai.suggestions_service import generate_advanced_ai_suggestions, try_generate_default_ai_suggestions
 from explanation.local_explainer import generate_automatic_explanation
-from export.exporter import ISSUE_REPORT_COLUMNS, export_review_summary
+from export.exporter import ISSUE_REPORT_COLUMNS, export_findings_summary, export_review_summary
 from pipeline import STATUS_UNSUPPORTED_INPUT, run_pipeline
 from review.review_manager import (
     REVIEW_DECISION_OPTIONS,
@@ -127,6 +127,7 @@ def run_analysis(
     review_log_df = read_output_csv(result.review_log_path, default_columns=REVIEW_LOG_COLUMNS)
     review_history_df = read_output_csv(result.review_history_path, default_columns=REVIEW_HISTORY_COLUMNS)
     review_summary_df = read_output_csv(result.review_summary_path)
+    findings_summary_df = read_output_csv(result.findings_summary_path)
     review_queue_df = build_review_queue(issue_report_df, review_log_df)
 
     if result.status == STATUS_UNSUPPORTED_INPUT:
@@ -157,6 +158,7 @@ def run_analysis(
         "review_log_path": result.review_log_path,
         "review_history_path": result.review_history_path,
         "review_summary_path": result.review_summary_path,
+        "findings_summary_path": result.findings_summary_path,
         "prepared_records_path": result.prepared_canonical_records_path,
         "source_filename": input_path.name,
     }
@@ -193,12 +195,14 @@ def run_analysis(
         ai_suggestions,
         ai_snapshot,
         *visual_bundle,
+        result.findings_summary_path,
         result.issue_report_path,
         result.review_log_path,
         result.review_history_path,
         result.review_summary_path,
         result.dataset_snapshot_path,
         result.prepared_canonical_records_path,
+        ui_rendering._build_findings_summary_preview(findings_summary_df),
         ui_rendering._build_issue_report_preview(issue_report_df),
         ui_rendering._build_review_summary_preview(review_summary_df),
         "All review states",
@@ -290,7 +294,16 @@ def save_review_decision(
             dataset_id=f"DATASET-{Path(review_paths['review_summary_path']).resolve().parent.name}",
             source_filename=review_paths.get("source_filename"),
         )
+    if review_paths.get("findings_summary_path"):
+        export_findings_summary(
+            issue_report_df,
+            prepared_records_df,
+            current_log_df,
+            review_paths["findings_summary_path"],
+            source_filename=review_paths.get("source_filename"),
+        )
     review_summary_df = read_output_csv(review_paths.get("review_summary_path"))
+    findings_summary_df = read_output_csv(review_paths.get("findings_summary_path"))
     refreshed_queue_df = build_review_queue(issue_report_df, current_log_df)
     review_workspace = ui_rendering._build_review_workspace(
         refreshed_queue_df,
@@ -311,6 +324,7 @@ def save_review_decision(
 
     return (
         "Review decision, notes, and evidence checked were saved to the current review log and appended to review history.",
+        review_paths["findings_summary_path"],
         review_paths["review_log_path"],
         review_paths["review_history_path"],
         review_paths["review_summary_path"],
@@ -318,6 +332,7 @@ def save_review_decision(
         *review_workspace,
         ui_rendering._queue_to_records(refreshed_queue_df),
         ui_rendering._queue_to_records(review_history_df),
+        ui_rendering._build_findings_summary_preview(findings_summary_df),
         ui_rendering._build_review_summary_preview(review_summary_df),
     )
 
@@ -472,12 +487,14 @@ def build_interface() -> gr.Blocks:
 
                 with gr.TabItem("Downloads"):
                     with gr.Row():
+                        findings_summary_file = gr.File(label="Findings summary", interactive=False)
                         issue_report_file = gr.File(label="Issue report", interactive=False)
                         review_log_file = gr.File(label="Review log", interactive=False)
                         review_history_file = gr.File(label="Review history", interactive=False)
                         review_summary_file = gr.File(label="Review summary", interactive=False)
                         dataset_snapshot_file = gr.File(label="Dataset snapshot", interactive=False)
                         prepared_canonical_records_file = gr.File(label="Prepared canonical records", interactive=False)
+                    findings_summary_preview = gr.Dataframe(label="Findings summary preview", interactive=False, max_height=240, wrap=True)
                     issue_report_preview = gr.Dataframe(label="Explanation preview", interactive=False, max_height=420, wrap=True)
                     review_summary_preview = gr.Dataframe(label="Review summary preview", interactive=False, max_height=180, wrap=True)
 
@@ -502,12 +519,14 @@ def build_interface() -> gr.Blocks:
                 anomaly_amount_plot,
                 priority_findings_preview,
                 anomaly_note_output,
+                findings_summary_file,
                 issue_report_file,
                 review_log_file,
                 review_history_file,
                 review_summary_file,
                 dataset_snapshot_file,
                 prepared_canonical_records_file,
+                findings_summary_preview,
                 issue_report_preview,
                 review_summary_preview,
                 status_filter_input,
@@ -556,6 +575,7 @@ def build_interface() -> gr.Blocks:
             inputs=[issue_selector, decision_input, evidence_checked_input, review_notes_input, status_filter_input, type_filter_input, search_text_input, review_queue_state, review_paths_state],
             outputs=[
                 review_save_feedback,
+                findings_summary_file,
                 review_log_file,
                 review_history_file,
                 review_summary_file,
@@ -581,6 +601,7 @@ def build_interface() -> gr.Blocks:
                 review_history_preview,
                 review_queue_state,
                 review_history_state,
+                findings_summary_preview,
                 review_summary_preview,
             ],
         )

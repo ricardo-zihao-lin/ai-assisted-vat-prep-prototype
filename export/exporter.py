@@ -37,6 +37,7 @@ ISSUE_REPORT_COLUMNS = [
     "value",
     "observed_value",
     "anomaly_score",
+    "anomaly_flag",
     "lower_bound",
     "upper_bound",
     "reason",
@@ -104,6 +105,7 @@ REVIEW_SUMMARY_COLUMNS = [
     "summary_note",
     "generated_by",
 ]
+FINDINGS_SUMMARY_COLUMNS = ["section", "metric", "value", "note"]
 INPUT_DIAGNOSTIC_FILE_NAME = "input_diagnostics.csv"
 
 
@@ -131,6 +133,13 @@ def _format_amount(value: object) -> str:
     if pd.isna(numeric_value):
         return _format_value(value)
     return f"GBP {float(numeric_value):,.2f}"
+
+
+def _humanise_label(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "Unknown"
+    return text.replace("_", " ").capitalize()
 
 
 def _safe_int(value: object) -> int | None:
@@ -282,6 +291,9 @@ def _build_metadata(row: pd.Series) -> pd.Series:
         return pd.Series(
             {
                 "finding_summary": f"{row_label}: unusual {checked_column} value",
+                "anomaly_flag": "High Value"
+                if pd.notna(row.get("observed_value")) and pd.notna(row.get("upper_bound")) and row.get("observed_value") > row.get("upper_bound")
+                else "Low Value",
                 "trigger_reason": f"The observed value {observed_value} sits outside the usual range for this file in {row_label}.",
                 "trigger_rule": (
                     f"The IQR screening rule on `{checked_column}` flags values below {lower_bound} "
@@ -548,6 +560,167 @@ def _build_review_summary(
     return pd.DataFrame([summary_record], columns=REVIEW_SUMMARY_COLUMNS)
 
 
+def _build_findings_summary(
+    issue_rows: pd.DataFrame,
+    prepared_dataframe: pd.DataFrame,
+    review_log: pd.DataFrame,
+    *,
+    source_filename: str | None,
+) -> pd.DataFrame:
+    summary_df = _build_review_summary(
+        issue_rows,
+        prepared_dataframe,
+        review_log,
+        dataset_id=f"DATASET-{Path(source_filename).stem.upper()}" if source_filename else "DATASET-EXPORT",
+        source_filename=source_filename,
+    )
+    if summary_df.empty:
+        return pd.DataFrame(columns=FINDINGS_SUMMARY_COLUMNS)
+
+    summary_row = summary_df.iloc[0]
+    total_issues = int(summary_row.get("total_issues") or 0)
+    unresolved_issue_count = int(summary_row.get("unresolved_issue_count") or 0)
+    resolved_issue_count = max(total_issues - unresolved_issue_count, 0)
+    records: list[dict[str, object]] = [
+        {
+            "section": "overview",
+            "metric": "source_file",
+            "value": source_filename or "",
+            "note": "Original file analysed in this run.",
+        },
+        {
+            "section": "overview",
+            "metric": "generated_at",
+            "value": str(summary_row.get("generated_at") or ""),
+            "note": "UTC time when the downloadable summary was created.",
+        },
+        {
+            "section": "overview",
+            "metric": "total_records",
+            "value": int(summary_row.get("total_records") or 0),
+            "note": "Prepared records that were available for checking.",
+        },
+        {
+            "section": "overview",
+            "metric": "records_with_issues",
+            "value": int(summary_row.get("records_with_issues") or 0),
+            "note": "Records that received at least one finding.",
+        },
+        {
+            "section": "overview",
+            "metric": "total_findings",
+            "value": total_issues,
+            "note": "Combined validation and anomaly findings in this run.",
+        },
+        {
+            "section": "progress",
+            "metric": "resolved_findings",
+            "value": resolved_issue_count,
+            "note": "Findings no longer in open, in-review, or escalated states.",
+        },
+        {
+            "section": "progress",
+            "metric": "pending_findings",
+            "value": unresolved_issue_count,
+            "note": "Findings that still need user attention.",
+        },
+        {
+            "section": "progress",
+            "metric": "review_completion_rate",
+            "value": f"{float(summary_row.get('review_completion_rate') or 0.0):.1f}%",
+            "note": "Share of findings that have reached closed review states.",
+        },
+        {
+            "section": "progress",
+            "metric": "corrected_findings",
+            "value": int(summary_row.get("corrected_issue_count") or 0),
+            "note": "Findings marked as corrected by the user.",
+        },
+        {
+            "section": "progress",
+            "metric": "accepted_with_note",
+            "value": int(summary_row.get("accepted_with_note_count") or 0),
+            "note": "Findings accepted after manual review with reviewer notes.",
+        },
+        {
+            "section": "progress",
+            "metric": "false_positives",
+            "value": int(summary_row.get("false_positive_count") or 0),
+            "note": "Flags judged not to be real issues.",
+        },
+        {
+            "section": "progress",
+            "metric": "escalated_findings",
+            "value": int(summary_row.get("escalated_issue_count") or 0),
+            "note": "Findings passed on for further checking.",
+        },
+    ]
+
+    if not issue_rows.empty and "issue_type" in issue_rows.columns:
+        top_issue_counts = issue_rows["issue_type"].dropna().astype(str).value_counts().head(5)
+        for rank, (issue_type, count) in enumerate(top_issue_counts.items(), start=1):
+            records.append(
+                {
+                    "section": "top_findings",
+                    "metric": f"finding_type_{rank}",
+                    "value": int(count),
+                    "note": f"{_humanise_label(issue_type)} findings were generated.",
+                }
+            )
+
+    if not issue_rows.empty and "fields_to_check" in issue_rows.columns:
+        top_fields = (
+            issue_rows["fields_to_check"]
+            .dropna()
+            .astype(str)
+            .str.split(",")
+            .explode()
+            .str.strip()
+            .replace("", pd.NA)
+            .dropna()
+            .value_counts()
+            .head(3)
+        )
+        for rank, (field_name, count) in enumerate(top_fields.items(), start=1):
+            records.append(
+                {
+                    "section": "focus",
+                    "metric": f"field_to_check_{rank}",
+                    "value": int(count),
+                    "note": f"{_humanise_label(field_name)} was frequently mentioned in review prompts.",
+                }
+            )
+
+    if not issue_rows.empty:
+        priority_rows = issue_rows.copy()
+        if review_log is not None and not review_log.empty and "issue_id" in review_log.columns:
+            latest_review = review_log.drop_duplicates(subset=["issue_id"], keep="last")[["issue_id", "decision"]].copy()
+            priority_rows = priority_rows.merge(latest_review, on="issue_id", how="left")
+            priority_rows["decision"] = priority_rows["decision"].fillna("pending").astype(str)
+            priority_rows = priority_rows[priority_rows["decision"].eq("pending")]
+
+        if not priority_rows.empty:
+            priority_rows["risk_rank"] = priority_rows["risk_level"].astype(str).map({"High": 0, "Medium": 1, "Low": 2}).fillna(3)
+            priority_rows["row_index_numeric"] = pd.to_numeric(priority_rows["row_index"], errors="coerce")
+            priority_rows = priority_rows.sort_values(["risk_rank", "row_index_numeric"], ascending=[True, True]).head(3)
+            for rank, row in enumerate(priority_rows.to_dict(orient="records"), start=1):
+                location = (
+                    f"Row {int(row['row_index_numeric'])}"
+                    if pd.notna(row.get("row_index_numeric"))
+                    else "Dataset-level"
+                )
+                records.append(
+                    {
+                        "section": "next_steps",
+                        "metric": f"priority_item_{rank}",
+                        "value": row.get("issue_id") or "",
+                        "note": f"{location}: {row.get('finding_summary') or row.get('suggested_action') or 'Review this flagged item next.'}",
+                    }
+                )
+
+    return pd.DataFrame(records, columns=FINDINGS_SUMMARY_COLUMNS)
+
+
 def export_review_summary(
     issue_report_df: pd.DataFrame,
     prepared_dataframe: pd.DataFrame,
@@ -568,6 +741,26 @@ def export_review_summary(
     summary_path = Path(output_path)
     summary_df.to_csv(summary_path, index=False)
     return summary_path
+
+
+def export_findings_summary(
+    issue_report_df: pd.DataFrame,
+    prepared_dataframe: pd.DataFrame,
+    review_log: pd.DataFrame,
+    output_path: str | Path,
+    *,
+    source_filename: str | None = None,
+) -> Path:
+    """Write a human-readable CSV summary for the Downloads view."""
+    findings_summary_df = _build_findings_summary(
+        issue_report_df,
+        prepared_dataframe,
+        review_log,
+        source_filename=source_filename,
+    )
+    findings_summary_path = Path(output_path)
+    findings_summary_df.to_csv(findings_summary_path, index=False)
+    return findings_summary_path
 
 
 def export_input_diagnostics(
@@ -616,6 +809,7 @@ def export_outputs(
     review_log_path = output_path / "review_log.csv"
     review_history_path = output_path / "review_history.csv"
     review_summary_path = output_path / "review_summary.csv"
+    findings_summary_path = output_path / "findings_summary.csv"
 
     raw_dataframe.to_csv(dataset_snapshot_path, index=False)
     prepared_dataframe.to_csv(prepared_canonical_records_path, index=False)
@@ -635,15 +829,23 @@ def export_outputs(
         dataset_id=f"DATASET-{output_path.name}",
         source_filename=source_filename,
     )
+    export_findings_summary(
+        issue_rows,
+        prepared_dataframe,
+        resolved_review_log,
+        findings_summary_path,
+        source_filename=source_filename,
+    )
 
     LOGGER.debug(
-        "Exported files created: %s, %s, %s, %s, %s",
+        "Exported files created: %s, %s, %s, %s, %s, %s, %s",
         dataset_snapshot_path,
         prepared_canonical_records_path,
         issue_report_path,
         review_log_path,
         review_history_path,
         review_summary_path,
+        findings_summary_path,
     )
 
     return {
@@ -653,4 +855,5 @@ def export_outputs(
         "review_log": review_log_path,
         "review_history": review_history_path,
         "review_summary": review_summary_path,
+        "findings_summary": findings_summary_path,
     }

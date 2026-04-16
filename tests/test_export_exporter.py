@@ -32,9 +32,13 @@ def test_export_outputs_writes_artifacts_and_summary(tmp_path: Path, base_datafr
 
     issue_report = pd.read_csv(exported["issue_report"])
     review_summary = pd.read_csv(exported["review_summary"])
+    findings_summary = pd.read_csv(exported["findings_summary"])
 
     assert len(issue_report) == 1
     assert issue_report.iloc[0]["issue_type"] == "missing_transaction_date"
     assert review_summary.iloc[0]["total_issues"] == 1
     assert bool(review_summary.iloc[0]["is_review_complete"]) is False
+    assert set(findings_summary.columns) == {"section", "metric", "value", "note"}
+    assert "total_findings" in set(findings_summary["metric"])
+    assert "pending_findings" in set(findings_summary["metric"])
 
