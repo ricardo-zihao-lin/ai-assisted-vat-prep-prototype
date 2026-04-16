@@ -6,6 +6,24 @@ This repository contains an undergraduate Final Year Project prototype for revie
 
 The prototype is a review assistant. It is not an HMRC filing client, not a bookkeeping platform, and not a replacement for professional tax judgement.
 
+## Screenshots And Demo
+
+Add project screenshots or a short demo GIF here so visitors can see the review workflow before reading the technical sections.
+
+Suggested assets:
+
+- `docs/images/gui-overview.png`: overall GUI view with upload area, summary, and findings list
+- `docs/images/review-centre.png`: dual-pane review workspace with issue context and decision controls
+- `docs/images/issue-report-example.png`: exported issue report or flagged findings example
+- `docs/images/demo-flow.gif`: short end-to-end flow from upload to saved review decision
+
+Recommended placement order:
+
+1. GUI overview
+2. Example input or flagged findings
+3. Review Centre
+4. Demo GIF
+
 ## What This Project Does
 
 The system takes spreadsheet-style transaction records, maps them into a canonical review structure, runs deterministic validation plus bounded anomaly checks, and exports review artefacts such as issue reports, review logs, and summaries.
@@ -28,6 +46,12 @@ In practice, it is intended to answer questions like:
 | Best fit for | Spreadsheet-using SMEs, bookkeepers, students, and project reviewers |
 | Not designed for | VAT filing, legal advice, or automated compliance sign-off |
 
+## Who It Is For
+
+- Small businesses or spreadsheet-based finance workflows that need a structured pre-submission review step
+- Bookkeepers or project reviewers who want flagged records plus traceable human decisions
+- Students, supervisors, and assessors reviewing the prototype as an undergraduate Final Year Project
+
 ## Why It Is Useful
 
 - It turns spreadsheet checking into a review workflow instead of a one-off error list.
@@ -49,9 +73,11 @@ date,description,net_amount,vat_amount,category
 
 The system can also ingest wider spreadsheets and map them into this canonical structure during preparation.
 
-## What The Prototype Produces
+## Example Review Results
 
-Depending on the dataset and run path, outputs can include:
+Instead of returning only a pass/fail result, the prototype produces review-oriented artefacts that support explanation, traceability, and follow-up checking.
+
+Typical outputs include:
 
 - `dataset_snapshot.csv`
 - `prepared_canonical_records.csv`
@@ -61,7 +87,12 @@ Depending on the dataset and run path, outputs can include:
 - `review_summary.csv`
 - diagnostic outputs when required fields are missing
 
-These artefacts are meant to support review, explanation, and traceability rather than provide a single pass/fail result.
+In practice, these outputs are meant to answer:
+
+- which records were flagged and why
+- which findings are deterministic issues versus review prompts
+- what evidence the reviewer checked
+- what decision was recorded and whether it can be audited later
 
 ## Review Workflow
 
