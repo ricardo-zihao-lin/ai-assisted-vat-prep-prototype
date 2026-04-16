@@ -1,0 +1,1073 @@
+[
+  {
+    "record_id": "REC-00053",
+    "row_index": 52,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "1.66",
+    "new_value": "1.98",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00161",
+    "row_index": 160,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "0.59",
+    "new_value": "5.46",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00497",
+    "row_index": 496,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "7.79",
+    "new_value": "6.7",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00279",
+    "row_index": 278,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "1.65",
+    "new_value": "-0.36",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00349",
+    "row_index": 348,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "1.5",
+    "new_value": "3.31",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00390",
+    "row_index": 389,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "1.17",
+    "new_value": "3.38",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00520",
+    "row_index": 519,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "7.9",
+    "new_value": "13.36",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00477",
+    "row_index": 476,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "5.5",
+    "new_value": "6.19",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00339",
+    "row_index": 338,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "1.05",
+    "new_value": "1.71",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00452",
+    "row_index": 451,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "3.25",
+    "new_value": "5.06",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00493",
+    "row_index": 492,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "18.34",
+    "new_value": "30.48",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00350",
+    "row_index": 349,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "2.04",
+    "new_value": "0.23",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00306",
+    "row_index": 305,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "2.25",
+    "new_value": "3.89",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00544",
+    "row_index": 543,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "0.88",
+    "new_value": "-3.99",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00010",
+    "row_index": 9,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "2.02",
+    "new_value": "-0.96",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00058",
+    "row_index": 57,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "0.5",
+    "new_value": "2.1",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00197",
+    "row_index": 196,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "0.33",
+    "new_value": "-3.56",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00150",
+    "row_index": 149,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "4.5",
+    "new_value": "0.15",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00278",
+    "row_index": 277,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "10.2",
+    "new_value": "8.39",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00478",
+    "row_index": 477,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "17.34",
+    "new_value": "22.94",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00162",
+    "row_index": 161,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "5.04",
+    "new_value": "3.0",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00208",
+    "row_index": 207,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "2.66",
+    "new_value": "1.42",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00462",
+    "row_index": 461,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "10.64",
+    "new_value": "13.32",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00406",
+    "row_index": 405,
+    "poison_type": "vat_math_inconsistency",
+    "field_changed": "vat_amount",
+    "original_value": "16.06",
+    "new_value": "13.58",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00312",
+    "row_index": 311,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "19.62",
+    "new_value": "13.96",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00088",
+    "row_index": 87,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "36.0",
+    "new_value": "32.44",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00255",
+    "row_index": 254,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "1.66",
+    "new_value": "-9.6",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00122",
+    "row_index": 121,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "12.1",
+    "new_value": "11.55",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00572",
+    "row_index": 571,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "93.02",
+    "new_value": "106.96",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00427",
+    "row_index": 426,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "31.7",
+    "new_value": "37.88",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00232",
+    "row_index": 231,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "2.04",
+    "new_value": "-4.08",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00536",
+    "row_index": 535,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "0.25",
+    "new_value": "14.46",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00390",
+    "row_index": 389,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "7.02",
+    "new_value": "8.91",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00462",
+    "row_index": 461,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "63.82",
+    "new_value": "45.3",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00454",
+    "row_index": 453,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "50.57",
+    "new_value": "41.78",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00305",
+    "row_index": 304,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "3.95",
+    "new_value": "-9.18",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00440",
+    "row_index": 439,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "96.22",
+    "new_value": "112.84",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00313",
+    "row_index": 312,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "49.98",
+    "new_value": "48.32",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00583",
+    "row_index": 582,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "60.2",
+    "new_value": "72.3",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00062",
+    "row_index": 61,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "1.0",
+    "new_value": "10.06",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00102",
+    "row_index": 101,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "23.4",
+    "new_value": "37.33",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00213",
+    "row_index": 212,
+    "poison_type": "gross_inconsistency",
+    "field_changed": "gross_amount",
+    "original_value": "5.05",
+    "new_value": "23.93",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00513",
+    "row_index": 512,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "VENDOR-2071",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00553",
+    "row_index": 552,
+    "poison_type": "missing_value",
+    "field_changed": "date",
+    "original_value": "2025-01-16",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00506",
+    "row_index": 505,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "VENDOR-1062",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00449",
+    "row_index": 448,
+    "poison_type": "missing_value",
+    "field_changed": "description",
+    "original_value": "Store Management Base Rent Real Estate Lease/Rent 2003-Jul  Ddl Electronics Inc",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00083",
+    "row_index": 82,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "UNKNOWN",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00041",
+    "row_index": 40,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "UNKNOWN",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00443",
+    "row_index": 442,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "VENDOR-1513",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00331",
+    "row_index": 330,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "15738",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00257",
+    "row_index": 256,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "UNKNOWN",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00027",
+    "row_index": 26,
+    "poison_type": "missing_value",
+    "field_changed": "date",
+    "original_value": "2025-02-11",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00094",
+    "row_index": 93,
+    "poison_type": "missing_value",
+    "field_changed": "description",
+    "original_value": "LOVE HEART NAPKIN BOX",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00235",
+    "row_index": 234,
+    "poison_type": "missing_value",
+    "field_changed": "description",
+    "original_value": "LUNCH BAG RED SPOTTY",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00590",
+    "row_index": 589,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "VENDOR-2229",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00022",
+    "row_index": 21,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "15640",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00276",
+    "row_index": 275,
+    "poison_type": "missing_value",
+    "field_changed": "date",
+    "original_value": "2025-02-05",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00591",
+    "row_index": 590,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "VENDOR-1114",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00042",
+    "row_index": 41,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "17719",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00180",
+    "row_index": 179,
+    "poison_type": "missing_value",
+    "field_changed": "date",
+    "original_value": "2025-03-09",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00482",
+    "row_index": 481,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "VENDOR-1404",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00532",
+    "row_index": 531,
+    "poison_type": "missing_value",
+    "field_changed": "date",
+    "original_value": "2025-03-05",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00453",
+    "row_index": 452,
+    "poison_type": "missing_value",
+    "field_changed": "description",
+    "original_value": "Ground Transportation Travel and Entertainment Miscellaneous Company Car (Field Only) Miscellaneous Company Car (Field Only) Jun-2006 Cooper Laboratories Inc Stockholders Liquidating Trust",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00285",
+    "row_index": 284,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "UNKNOWN",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00186",
+    "row_index": 185,
+    "poison_type": "missing_value",
+    "field_changed": "description",
+    "original_value": "TEA TIME CAKE STAND IN GIFT BOX",
+    "new_value": "nan",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00600",
+    "row_index": 599,
+    "poison_type": "missing_value",
+    "field_changed": "counterparty_ref",
+    "original_value": "VENDOR-2478",
+    "new_value": "nan",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00259",
+    "row_index": 258,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "9.13",
+    "new_value": "??",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00332",
+    "row_index": 331,
+    "poison_type": "invalid_numeric",
+    "field_changed": "vat_amount",
+    "original_value": "1.18",
+    "new_value": "TBC",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00119",
+    "row_index": 118,
+    "poison_type": "invalid_numeric",
+    "field_changed": "vat_amount",
+    "original_value": "0.66",
+    "new_value": "VOID",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00414",
+    "row_index": 413,
+    "poison_type": "invalid_numeric",
+    "field_changed": "vat_amount",
+    "original_value": "6.2",
+    "new_value": "#REF!",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00527",
+    "row_index": 526,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "44.82",
+    "new_value": "??",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00002",
+    "row_index": 1,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "15.0",
+    "new_value": "-",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00556",
+    "row_index": 555,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "66.76",
+    "new_value": "GBPerr",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00474",
+    "row_index": 473,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "1.38",
+    "new_value": "??",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00424",
+    "row_index": 423,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "59.95",
+    "new_value": "VOID",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00056",
+    "row_index": 55,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "5.04",
+    "new_value": "TBC",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00193",
+    "row_index": 192,
+    "poison_type": "invalid_numeric",
+    "field_changed": "vat_amount",
+    "original_value": "0.5",
+    "new_value": "-",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00531",
+    "row_index": 530,
+    "poison_type": "invalid_numeric",
+    "field_changed": "vat_amount",
+    "original_value": "18.24",
+    "new_value": "GBPerr",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00371",
+    "row_index": 370,
+    "poison_type": "invalid_numeric",
+    "field_changed": "vat_amount",
+    "original_value": "3.47",
+    "new_value": "VOID",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00511",
+    "row_index": 510,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "37.36",
+    "new_value": "VOID",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00453",
+    "row_index": 452,
+    "poison_type": "invalid_numeric",
+    "field_changed": "net_amount",
+    "original_value": "33.57",
+    "new_value": "GBPerr",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00196",
+    "row_index": 195,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-01-16",
+    "new_value": "00/00/0000",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00521",
+    "row_index": 520,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-03-18",
+    "new_value": "00/00/0000",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00140",
+    "row_index": 139,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-01-08",
+    "new_value": "Jan 2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00072",
+    "row_index": 71,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-02-06",
+    "new_value": "Jan 2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00283",
+    "row_index": 282,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-01-22",
+    "new_value": "Q1-2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00425",
+    "row_index": 424,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-02-24",
+    "new_value": "00/00/0000",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00349",
+    "row_index": 348,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-02-22",
+    "new_value": "Jan 2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00520",
+    "row_index": 519,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-03-16",
+    "new_value": "01-2025",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00274",
+    "row_index": 273,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-02-22",
+    "new_value": "01-2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00003",
+    "row_index": 2,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-03-19",
+    "new_value": "Q1-2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00290",
+    "row_index": 289,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-01-09",
+    "new_value": "01-2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00306",
+    "row_index": 305,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-02-11",
+    "new_value": "Q1-2025",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00594",
+    "row_index": 593,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-02-24",
+    "new_value": "32/01/2025",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00502",
+    "row_index": 501,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-03-20",
+    "new_value": "Jan 2025",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00153",
+    "row_index": 152,
+    "poison_type": "invalid_date_format",
+    "field_changed": "date",
+    "original_value": "2025-01-13",
+    "new_value": "00/00/0000",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-DUP-0001",
+    "row_index": 600,
+    "poison_type": "duplicate",
+    "field_changed": "(none - exact copy)",
+    "original_value": "(original row)",
+    "new_value": "(exact duplicate)",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-DUP-0002",
+    "row_index": 601,
+    "poison_type": "duplicate",
+    "field_changed": "net_amount",
+    "original_value": "76.32",
+    "new_value": "76.33",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-DUP-0003",
+    "row_index": 602,
+    "poison_type": "duplicate",
+    "field_changed": "(none - exact copy)",
+    "original_value": "(original row)",
+    "new_value": "(exact duplicate)",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-DUP-0004",
+    "row_index": 603,
+    "poison_type": "duplicate",
+    "field_changed": "net_amount",
+    "original_value": "80.46",
+    "new_value": "80.47",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-DUP-0005",
+    "row_index": 604,
+    "poison_type": "duplicate",
+    "field_changed": "(none - exact copy)",
+    "original_value": "(original row)",
+    "new_value": "(exact duplicate)",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-DUP-0006",
+    "row_index": 605,
+    "poison_type": "duplicate",
+    "field_changed": "net_amount",
+    "original_value": "14.85",
+    "new_value": "14.86",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-DUP-0007",
+    "row_index": 606,
+    "poison_type": "duplicate",
+    "field_changed": "(none - exact copy)",
+    "original_value": "(original row)",
+    "new_value": "(exact duplicate)",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-DUP-0008",
+    "row_index": 607,
+    "poison_type": "duplicate",
+    "field_changed": "net_amount",
+    "original_value": "4.13",
+    "new_value": "4.14",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00565",
+    "row_index": 564,
+    "poison_type": "group_outlier_amount",
+    "field_changed": "net_amount",
+    "original_value": "27.73",
+    "new_value": "762.87",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00531",
+    "row_index": 530,
+    "poison_type": "group_outlier_amount",
+    "field_changed": "net_amount",
+    "original_value": "91.21",
+    "new_value": "824.61",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00336",
+    "row_index": 335,
+    "poison_type": "group_outlier_amount",
+    "field_changed": "net_amount",
+    "original_value": "3.3",
+    "new_value": "52.2",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00345",
+    "row_index": 344,
+    "poison_type": "group_outlier_amount",
+    "field_changed": "net_amount",
+    "original_value": "11.58",
+    "new_value": "69.18",
+    "source_type": "sale"
+  },
+  {
+    "record_id": "REC-00411",
+    "row_index": 410,
+    "poison_type": "group_outlier_amount",
+    "field_changed": "net_amount",
+    "original_value": "9.81",
+    "new_value": "980.69",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00573",
+    "row_index": 572,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Aerotelesis Inc Real Estate General (Search, Appraisal, Realtor Commission) Jan 2002 Real Estate Services Real Estate Store Management",
+    "new_value": "Client Hospitality Lunch",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00537",
+    "row_index": 536,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Real Estate General (Search, Appraisal, Realtor Commission) Apr2005 Store Management Tri Valley Corp Real Estate Real Estate Services",
+    "new_value": "Staff Party Entertainment",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00498",
+    "row_index": 497,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Final Site Clean Up Store Construction American Pad & Paper Co Jul2009 General Requirements General Contractor",
+    "new_value": "Director's Gym Membership",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00482",
+    "row_index": 481,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Bell Atlantic Pennsylvania Inc Final Site Clean Up Nov2011 General Requirements General Contractor Store Construction",
+    "new_value": "Team Building Away Day",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00561",
+    "row_index": 560,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Feb-2005 Bailard Biehl & Kaiser Inc                              /Adv Store Fixtures Store Fixtures Store Construction Fixtures",
+    "new_value": "Corporate Box - Premier League",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00584",
+    "row_index": 583,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Base Rent Store Management Continental Heritage Corp 2012-Mar  Lease/Rent Real Estate",
+    "new_value": "Client Golf Day",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00595",
+    "row_index": 594,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "American Cattle Co 2016Aug Corporate Services Human Resources Contingent Labor/Temp Labor Contingent Labor/Temp Labor",
+    "new_value": "Christmas Party - All Staff",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00525",
+    "row_index": 524,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Base Rent Store Management Anaren  Inc 2013-Sep  Lease/Rent Real Estate",
+    "new_value": "Executive Dining - Board Dinner",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00539",
+    "row_index": 538,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "Brother Industries Ltd/Adr/ Miscellaneous Company Car (Field Only) 2017-Feb  Miscellaneous Company Car (Field Only) Ground Transportation Travel and Entertainment",
+    "new_value": "Spa Vouchers - Client Gift",
+    "source_type": "purchase"
+  },
+  {
+    "record_id": "REC-00410",
+    "row_index": 409,
+    "poison_type": "semantic_risk",
+    "field_changed": "description",
+    "original_value": "SMAP Trade Show Expenses Detrex Corporation Events and Promotions Talent, Artists & Models for Trade Show Jan2011",
+    "new_value": "Employee Wellness Retreat",
+    "source_type": "purchase"
+  }
+]

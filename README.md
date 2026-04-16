@@ -117,6 +117,24 @@ This repository does not claim validation on live HMRC systems or on authoritati
 
 This separation is intentional. Different datasets support different claims, and the project avoids presenting synthetic or adapted data as real SME tax ground truth.
 
+For the controlled poisoning testbed, the project uses two public seed datasets:
+
+- Online Retail II as the sales or output VAT seed, giving UK retail transaction lines with real descriptions and cancellation-capable source records: [Kaggle mirror](https://www.kaggle.com/datasets/mathchi/online-retail-ii-data-set-from-ml-repository)
+- Purchase Ledger invoice data as the purchases or input VAT seed, giving enterprise-style procurement descriptions for semantic review and supplier-pattern checks: [Kaggle mirror](https://www.kaggle.com/datasets/nikhil1011/predict-product-category-from-given-invoice)
+
+The current controlled poisoning run produced 119 injected issues in total, recorded in `data/evaluation/poisoning_log.json`.
+
+Issue count summary:
+
+- `duplicate`: 8
+- `gross_inconsistency`: 18
+- `group_outlier_amount`: 5
+- `invalid_date_format`: 15
+- `invalid_numeric`: 15
+- `missing_value`: 24
+- `semantic_risk`: 10
+- `vat_math_inconsistency`: 24
+
 For provenance and evaluation context, see:
 
 - [docs/data_sources.md](docs/data_sources.md)

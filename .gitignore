@@ -9,3 +9,5 @@ dist/
 _tmp_*/
 _tmp_*.html
 archive/local_references/
+data/public_raw/raw_sales_seed.csv
+data/public_raw/raw_purchase_seed.csv
