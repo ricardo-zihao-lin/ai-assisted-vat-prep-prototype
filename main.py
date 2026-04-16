@@ -19,13 +19,13 @@ def _build_parser(base_dir: Path) -> argparse.ArgumentParser:
     parser.add_argument(
         "--input",
         type=Path,
-        default=base_dir / "data" / "sample_data.csv",
+        default=base_dir / "data" / "demo" / "sample_data.csv",
         help="Path to the CSV or Excel file to analyse.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=base_dir / "output",
+        default=base_dir / "output" / "runs" / "source",
         help="Directory where the exported CSV artefacts should be written.",
     )
     parser.add_argument(
@@ -52,10 +52,12 @@ def _print_run_summary(result) -> None:
     if result.missing_required_fields:
         print(f"Missing required fields: {', '.join(result.missing_required_fields)}")
     print(f"dataset_snapshot: {result.dataset_snapshot_path}")
+    print(f"input_diagnostics: {result.input_diagnostics_path}")
     print(f"prepared_canonical_records: {result.prepared_canonical_records_path}")
     print(f"issue_report: {result.issue_report_path}")
     print(f"review_log: {result.review_log_path}")
     print(f"review_history: {result.review_history_path}")
+    print(f"review_summary: {result.review_summary_path}")
 
 
 def main(argv: list[str] | None = None) -> int:

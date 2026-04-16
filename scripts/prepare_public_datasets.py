@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = BASE_DIR / "data" / "public_raw"
 ADAPTED_DIR = BASE_DIR / "data" / "public_adapted"
 OUTPUT_COLUMNS = ["date", "description", "net_amount", "vat_amount", "category"]

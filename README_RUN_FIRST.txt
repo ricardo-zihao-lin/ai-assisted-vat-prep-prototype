@@ -5,7 +5,7 @@ Run This Demo First
 2. Open the unzipped folder.
 3. Double-click VAT_Spreadsheet_Demo.exe.
 4. The local browser UI should open automatically.
-5. If you want a quick sample file, use data\sample_data.csv inside the package.
+5. If you want a quick sample file, use data\demo\sample_data.csv inside the package.
 
 If the browser does not open automatically, check the terminal window and visit the local address shown there, usually:
 http://127.0.0.1:7860

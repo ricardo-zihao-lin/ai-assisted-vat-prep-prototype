@@ -11,7 +11,17 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-CANONICAL_COLUMNS = ["date", "description", "net_amount", "vat_amount", "category"]
+CANONICAL_COLUMNS = [
+    "date",
+    "invoice_reference",
+    "description",
+    "net_amount",
+    "vat_amount",
+    "gross_amount",
+    "counterparty_ref",
+    "document_reference",
+    "category",
+]
 REQUIRED_COLUMNS = ["date", "description", "net_amount", "vat_amount"]
 
 PREPARATION_STATUS_CANONICAL = "canonical"
@@ -20,11 +30,29 @@ PREPARATION_STATUS_UNSUPPORTED = "unsupported"
 
 HEADER_ALIASES = {
     "date": ["transaction_date", "invoice_date"],
+    "invoice_reference": ["invoice_no", "invoice_number", "invoice_id"],
     "description": ["details", "narrative"],
     "net_amount": ["net", "amount_ex_vat", "amount"],
     "vat_amount": ["vat", "tax_amount"],
+    "gross_amount": ["gross", "total_amount", "amount_inc_vat"],
+    "counterparty_ref": ["supplier_ref", "customer_ref", "counterparty", "supplier", "customer", "client_ref"],
+    "document_reference": ["document_id", "doc_ref", "evidence_reference", "receipt_reference"],
     "category": ["type"],
 }
+
+INPUT_DIAGNOSTIC_COLUMNS = [
+    "canonical_field",
+    "field_role",
+    "field_status",
+    "mapping_type",
+    "source_column",
+    "candidate_columns",
+    "accepted_aliases",
+    "repair_guidance",
+    "preparation_status",
+    "preparation_message",
+    "missing_required_fields",
+]
 
 
 @dataclass(frozen=True)
@@ -53,6 +81,106 @@ def _resolve_source_column(
             return alias
 
     return None
+
+
+def _collect_candidate_columns(dataframe: pd.DataFrame, canonical_field: str) -> tuple[str, ...]:
+    """Return source columns that match the canonical field directly or through accepted aliases."""
+    candidates: list[str] = []
+    if canonical_field in dataframe.columns:
+        candidates.append(canonical_field)
+
+    for alias in HEADER_ALIASES.get(canonical_field, []):
+        if alias in dataframe.columns and alias not in candidates:
+            candidates.append(alias)
+    return tuple(candidates)
+
+
+def _format_column_list(columns: tuple[str, ...]) -> str:
+    """Render a compact CSV-friendly list of column names."""
+    return ", ".join(columns)
+
+
+def _build_repair_guidance(
+    canonical_field: str,
+    *,
+    source_column: str | None,
+    candidate_columns: tuple[str, ...],
+    is_required: bool,
+) -> str:
+    """Create a short actionable note for unsupported or mapped fields."""
+    if source_column is not None:
+        if source_column == canonical_field:
+            return f"The `{canonical_field}` column is already aligned with the canonical schema."
+        return (
+            f"The `{canonical_field}` field was mapped from `{source_column}`. "
+            f"Keep that heading or rename it to `{canonical_field}` for future runs."
+        )
+
+    if is_required:
+        accepted_aliases = HEADER_ALIASES.get(canonical_field, ())
+        if accepted_aliases:
+            return (
+                f"Add or rename a column to `{canonical_field}` or one of these accepted aliases: "
+                f"{_format_column_list(tuple(accepted_aliases))}."
+            )
+        return f"Add a `{canonical_field}` column before rerunning the analysis."
+
+    if candidate_columns:
+        return (
+            f"The `{canonical_field}` field is optional and no source column was mapped to it. "
+            f"If you want to use it, rename one of the candidate columns to `{canonical_field}`."
+        )
+
+    return f"The `{canonical_field}` field is optional and can be left blank for this prototype."
+
+
+def build_input_diagnostics(
+    dataframe: pd.DataFrame,
+    preparation_result: PreparationResult,
+) -> pd.DataFrame:
+    """Build a compact CSV-ready diagnostic table for unsupported input files."""
+    missing_required_fields = set(preparation_result.missing_required_fields)
+    mapping = preparation_result.mapping
+    rows: list[dict[str, str]] = []
+
+    for canonical_field in CANONICAL_COLUMNS:
+        source_column = mapping.get(canonical_field)
+        candidate_columns = _collect_candidate_columns(dataframe, canonical_field)
+        accepted_aliases = tuple(HEADER_ALIASES.get(canonical_field, ()))
+        field_role = "required" if canonical_field in REQUIRED_COLUMNS else "optional"
+
+        if source_column is not None:
+            field_status = "mapped"
+            mapping_type = "exact" if source_column == canonical_field else "alias"
+        elif canonical_field in missing_required_fields:
+            field_status = "missing_required"
+            mapping_type = "missing"
+        else:
+            field_status = "not_mapped"
+            mapping_type = "unmapped_optional"
+
+        rows.append(
+            {
+                "canonical_field": canonical_field,
+                "field_role": field_role,
+                "field_status": field_status,
+                "mapping_type": mapping_type,
+                "source_column": source_column or "",
+                "candidate_columns": _format_column_list(candidate_columns),
+                "accepted_aliases": _format_column_list(accepted_aliases),
+                "repair_guidance": _build_repair_guidance(
+                    canonical_field,
+                    source_column=source_column,
+                    candidate_columns=candidate_columns,
+                    is_required=canonical_field in REQUIRED_COLUMNS,
+                ),
+                "preparation_status": preparation_result.status,
+                "preparation_message": preparation_result.message,
+                "missing_required_fields": _format_column_list(preparation_result.missing_required_fields),
+            }
+        )
+
+    return pd.DataFrame(rows, columns=INPUT_DIAGNOSTIC_COLUMNS)
 
 
 def prepare_input_dataframe(dataframe: pd.DataFrame) -> PreparationResult:
@@ -97,6 +225,8 @@ def prepare_input_dataframe(dataframe: pd.DataFrame) -> PreparationResult:
             prepared_columns[canonical_field] = dataframe[source_column]
 
     prepared_dataframe = pd.DataFrame(prepared_columns, index=dataframe.index).reindex(columns=CANONICAL_COLUMNS)
+    prepared_dataframe.attrs["source_mapping"] = mapping
+    prepared_dataframe.attrs["canonical_columns"] = tuple(CANONICAL_COLUMNS)
 
     if all(mapping.get(column_name) == column_name for column_name in CANONICAL_COLUMNS):
         return PreparationResult(

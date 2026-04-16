@@ -1,0 +1,2 @@
+source_dataset,input_row_count,output_row_count,cancelled_row_count,export_zero_rated_count,standard_rated_count,reduced_rated_count,zero_rated_count,exempt_count,total_net_amount,total_vat_amount,total_gross_amount,month_range
+uci_online_retail_like_seed,28,28,3,7,18,3,7,0,913.51,130.81,1044.32,2010-12 to 2011-06

@@ -7,7 +7,7 @@ This repository uses one shared Python core with multiple thin entry shells:
 - `pipeline.py` and related modules keep the business logic
 - `main.py` is the source-run shell
 - `gui.py` is the shared browser GUI shell
-- `build_demo.ps1` and `vat_spreadsheet_demo.spec` package the same GUI for Windows
+- `tools/build_demo.ps1` and `packaging/vat_spreadsheet_demo.spec` package the same GUI for Windows
 - `Dockerfile` and `docker-compose.yml` containerise the same GUI service
 
 This keeps deployment stable even while the evaluation layer is still changing.
@@ -71,13 +71,13 @@ Run the shared pipeline directly:
 Windows:
 
 ```bat
-venv\Scripts\python.exe main.py --input data\sample_data.csv --output-dir output
+venv\Scripts\python.exe main.py --input data\demo\sample_data.csv --output-dir output
 ```
 
 macOS / Linux:
 
 ```bash
-python3 main.py --input data/sample_data.csv --output-dir output
+python3 main.py --input data/demo/sample_data.csv --output-dir output
 ```
 
 Notes:
@@ -99,13 +99,13 @@ venv\Scripts\python.exe gui.py --host 127.0.0.1 --port 7860
 Convenience launcher:
 
 ```bat
-run_demo.bat
+tools\run_demo.bat
 ```
 
 macOS:
 
 ```bash
-./run_demo_mac.command
+./tools/run_demo_mac.command
 ```
 
 What the macOS script does:
@@ -139,13 +139,13 @@ Environment variables supported by `gui.py`:
 Build from Windows:
 
 ```powershell
-.\build_demo.ps1
+.\tools\build_demo.ps1
 ```
 
 If you want to point the build at a specific interpreter:
 
 ```powershell
-.\build_demo.ps1 -PythonExe python
+.\tools\build_demo.ps1 -PythonExe python
 ```
 
 Build outputs:
@@ -157,7 +157,7 @@ Package contents:
 
 - `VAT_Spreadsheet_Demo.exe`
 - `README_RUN_FIRST.txt`
-- bundled sample input `data/sample_data.csv`
+- bundled sample input `data/demo/sample_data.csv`
 
 Current packaging choices:
 
@@ -245,7 +245,7 @@ File:
 What it does:
 
 - installs runtime dependencies plus PyInstaller
-- runs `build_demo.ps1`
+- runs `tools/build_demo.ps1`
 - uploads:
   - `dist/VAT_Spreadsheet_Demo`
   - `dist/VAT_Spreadsheet_Demo_windows_x64.zip`

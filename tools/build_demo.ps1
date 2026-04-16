@@ -5,7 +5,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
 $defaultPython = Join-Path $projectRoot "venv\Scripts\python.exe"
@@ -60,7 +61,7 @@ if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
 
-& $resolvedPython -m PyInstaller --noconfirm "vat_spreadsheet_demo.spec"
+& $resolvedPython -m PyInstaller --noconfirm "packaging\vat_spreadsheet_demo.spec"
 if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller build failed."
 }

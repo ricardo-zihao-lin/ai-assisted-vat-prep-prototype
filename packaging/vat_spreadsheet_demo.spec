@@ -15,7 +15,7 @@ GRADIO_RUNTIME_PACKAGES = (
 )
 RUNTIME_DEMO_FILES = (
     "README_RUN_FIRST.txt",
-    "data/sample_data.csv",
+    "data/demo/sample_data.csv",
 )
 
 
@@ -61,7 +61,7 @@ hiddenimports = package_hiddenimports
 
 
 a = Analysis(
-    ["gui.py"],
+    [str(PROJECT_ROOT / "gui.py")],
     pathex=[str(PROJECT_ROOT)],
     binaries=package_binaries,
     datas=datas,

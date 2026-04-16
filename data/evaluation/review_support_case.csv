@@ -1,0 +1,11 @@
+date,description,net_amount,vat_amount,category
+2026-05-01,Stationery order,95.00,19.00,Office
+2026-05-02,,210.00,42.00,Training
+2026-05-03,Monthly retainer,1250.00,250.00,Sales
+2026-05-04,Travel expense,72.00,14.40,Travel
+2026-05-05,Cloud hosting,110.00,22.00,Software
+2026-05-06,Client project,18500.00,3700.00,Sales
+2026-05-07,Consultancy payment,error_value,20.00,Sales
+2026-05-08,Repeat purchase,320.00,64.00,Equipment
+2026-05-08,Repeat purchase,320.00,64.00,Equipment
+

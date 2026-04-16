@@ -1,0 +1,35 @@
+{
+  "source_input": "C:\\Users\\Administrator\\FYP_Project\\data\\realism\\uci_online_retail_like_seed.csv",
+  "calibration_file": "C:\\Users\\Administrator\\FYP_Project\\data\\realism\\monthly_direction_calibration.csv",
+  "source_label": "uci_online_retail_like_seed",
+  "main_purpose": "Supplemental realism dataset for evaluation, not replacement for controlled usefulness validation.",
+  "generation_rules": {
+    "country_zero_rate_overrides": [
+      "belgium",
+      "france",
+      "germany",
+      "netherlands",
+      "portugal",
+      "spain"
+    ],
+    "zero_rated_keywords": [
+      "book",
+      "books",
+      "cake cases",
+      "food"
+    ],
+    "reduced_rate_keywords": [
+      "energy",
+      "warmer",
+      "heating"
+    ],
+    "exempt_keywords": [
+      "postage"
+    ],
+    "cancellation_rule": "InvoiceNo starting with C or negative Quantity produces signed negative reversal rows."
+  },
+  "output_files": {
+    "dataset": "C:\\Users\\Administrator\\FYP_Project\\output\\runs\\realism_dataset\\synthetic_vat_realism_dataset.csv",
+    "summary": "C:\\Users\\Administrator\\FYP_Project\\output\\runs\\realism_dataset\\synthetic_vat_realism_summary.csv"
+  }
+}

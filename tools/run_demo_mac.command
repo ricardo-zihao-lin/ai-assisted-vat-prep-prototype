@@ -2,7 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_DIR"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 VENV_DIR="$SCRIPT_DIR/.venv-mac"
@@ -23,4 +24,4 @@ if [ ! -f "$STAMP_FILE" ] || [ requirements.txt -nt "$STAMP_FILE" ]; then
   touch "$STAMP_FILE"
 fi
 
-exec "$VENV_DIR/bin/python" gui.py --host 127.0.0.1 --port 7860
+exec "$VENV_DIR/bin/python" "$PROJECT_DIR/gui.py" --host 127.0.0.1 --port 7860

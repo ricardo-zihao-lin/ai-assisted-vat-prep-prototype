@@ -1,0 +1,19 @@
+dataset_name,scenario_focus,row_index,rule_id,issue_type,expected_status,expected_risk,expected_decision_example,notes
+deterministic_validation_case.csv,missing transaction date,1,VR001,missing_transaction_date,Non-compliant,High,corrected,Should demonstrate a concrete deterministic issue
+deterministic_validation_case.csv,invalid date format,2,VR002,invalid_date_format,Non-compliant,High,corrected,Should demonstrate unreadable date handling
+deterministic_validation_case.csv,missing net amount,3,VR004,missing_net_amount,Non-compliant,High,corrected,Should demonstrate core amount absence
+deterministic_validation_case.csv,invalid numeric net amount,4,VR005,non_numeric_net_amount,Non-compliant,High,corrected,Should demonstrate numeric parsing failure
+deterministic_validation_case.csv,duplicate row first instance,5,VR008,exact_duplicate_row,Non-compliant,High,excluded_from_review_set,Should demonstrate duplicate review
+deterministic_validation_case.csv,duplicate row second instance,6,VR008,exact_duplicate_row,Non-compliant,High,excluded_from_review_set,Should demonstrate duplicate review
+review_support_case.csv,blank description,1,VR013,blank_description,Review required,Medium,accepted_with_note,Useful for explainability comparison
+review_support_case.csv,moderately unusual amount,2,VR015,unusual_net_amount,Review required,Medium,confirmed_issue,Useful for review-signal handling
+review_support_case.csv,large unusual amount,5,VR015,unusual_net_amount,Review required,Medium,confirmed_issue,Useful for review-signal handling
+review_support_case.csv,invalid numeric amount,6,VR005,non_numeric_net_amount,Non-compliant,High,corrected,Shows deterministic and review-signal mix
+review_support_case.csv,duplicate row first instance,7,VR008,exact_duplicate_row,Non-compliant,High,excluded_from_review_set,Useful for comparing recommended action text
+review_support_case.csv,duplicate row second instance,8,VR008,exact_duplicate_row,Non-compliant,High,excluded_from_review_set,Useful for comparing recommended action text
+decision_logging_case.csv,blank description for accepted-with-note,1,VR013,blank_description,Review required,Medium,accepted_with_note,Supports note and evidence logging
+decision_logging_case.csv,invalid date for correction,2,VR002,invalid_date_format,Non-compliant,High,corrected,Supports correction workflow
+decision_logging_case.csv,large unusual amount for escalation,3,VR015,unusual_net_amount,Review required,Medium,escalated,Supports escalation demonstration
+decision_logging_case.csv,invalid numeric amount,4,VR005,non_numeric_net_amount,Non-compliant,High,corrected,Supports decision logging schema
+decision_logging_case.csv,duplicate row first instance,5,VR008,exact_duplicate_row,Non-compliant,High,excluded_from_review_set,Supports exclusion decision
+decision_logging_case.csv,duplicate row second instance,6,VR008,exact_duplicate_row,Non-compliant,High,excluded_from_review_set,Supports exclusion decision
