@@ -543,6 +543,137 @@ def _build_findings_summary_preview(findings_summary_df: pd.DataFrame) -> pd.Dat
     return findings_summary_df.reindex(columns=FINDINGS_SUMMARY_PREVIEW_COLUMNS).head(20)
 
 
+def _format_count_label(value: object, noun: str) -> str:
+    try:
+        count = int(float(value))
+    except Exception:
+        return f"0 {noun}s"
+    suffix = "" if count == 1 else "s"
+    return f"{count} {noun}{suffix}"
+
+
+def _safe_int(value: object, default: int = 0) -> int:
+    try:
+        if pd.isna(value):
+            return default
+        return int(float(value))
+    except Exception:
+        return default
+
+
+def _safe_text(value: object, default: str = "") -> str:
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+    except Exception:
+        pass
+    text = str(value).strip()
+    return text or default
+
+
+def _build_downloads_plain_language_html(
+    issue_report_df: pd.DataFrame,
+    review_summary_df: pd.DataFrame,
+) -> str:
+    if issue_report_df.empty and review_summary_df.empty:
+        return """
+        <div class="downloads-plain-card">
+          <div class="downloads-plain-kicker">Plain-language overview</div>
+          <div class="downloads-plain-title">Run an analysis to see a plain-English summary here.</div>
+          <div class="downloads-plain-copy">
+            This panel will explain the overall result, what needs attention first, and which download is most useful next.
+          </div>
+        </div>
+        """
+
+    summary_row = review_summary_df.iloc[0] if not review_summary_df.empty else pd.Series(dtype=object)
+    total_records = _safe_int(summary_row.get("total_records"), default=len(issue_report_df))
+    total_issues = _safe_int(summary_row.get("total_issues"), default=len(issue_report_df))
+    unresolved_issues = _safe_int(summary_row.get("unresolved_issue_count"))
+    high_risk_open = _safe_int(summary_row.get("high_risk_open_count"))
+    escalated_issues = _safe_int(summary_row.get("escalated_issue_count"))
+    completion_rate = _safe_text(summary_row.get("review_completion_rate"), "Not started yet")
+    review_complete = _safe_text(summary_row.get("is_review_complete"), "False").lower() in {"true", "yes", "1"}
+    summary_note = _safe_text(summary_row.get("summary_note"))
+
+    issue_type_text = "No specific issue types were identified."
+    top_issue_copy = "Open the issue details report if you need to inspect individual rows."
+    if not issue_report_df.empty and "issue_type" in issue_report_df.columns:
+        type_counts = issue_report_df["issue_type"].dropna().astype(str).value_counts()
+        if not type_counts.empty:
+            top_issue_type = type_counts.index[0]
+            top_issue_label = _normalise_issue_label(top_issue_type)
+            top_issue_count = int(type_counts.iloc[0])
+            issue_type_text = f"The most common reason records were flagged was {html.escape(top_issue_label.lower())}, affecting {top_issue_count} record(s)."
+
+            matching_issue = issue_report_df[issue_report_df["issue_type"].astype(str) == top_issue_type].head(1)
+            if not matching_issue.empty:
+                finding_summary = _safe_text(matching_issue.iloc[0].get("finding_summary"))
+                suggested_action = _safe_text(matching_issue.iloc[0].get("suggested_action"))
+                why_it_matters = _safe_text(matching_issue.iloc[0].get("why_it_matters"))
+                details = [part for part in [finding_summary, why_it_matters, suggested_action] if part]
+                if details:
+                    top_issue_copy = " ".join(html.escape(part) for part in details[:2])
+                    if len(details) > 2:
+                        top_issue_copy += f" Next step: {html.escape(details[2])}"
+
+    status_line = (
+        "The review is marked as complete."
+        if review_complete
+        else f"The review is still in progress, with {_format_count_label(unresolved_issues, 'issue')} still unresolved."
+    )
+    risk_line = f"{_format_count_label(high_risk_open, 'high-risk item')} still need attention."
+    escalated_line = f"{_format_count_label(escalated_issues, 'item')} have been escalated for follow-up."
+
+    note_block = (
+        f'<div class="downloads-plain-note"><strong>System note:</strong> {html.escape(summary_note)}</div>'
+        if summary_note
+        else ""
+    )
+
+    return f"""
+    <div class="downloads-plain-card">
+      <div class="downloads-plain-kicker">Plain-language overview</div>
+      <div class="downloads-plain-title">What this run means</div>
+      <div class="downloads-plain-grid">
+        <div class="downloads-plain-metric">
+          <div class="downloads-plain-metric-value">{total_records}</div>
+          <div class="downloads-plain-metric-label">records checked</div>
+        </div>
+        <div class="downloads-plain-metric">
+          <div class="downloads-plain-metric-value">{total_issues}</div>
+          <div class="downloads-plain-metric-label">issues found</div>
+        </div>
+        <div class="downloads-plain-metric">
+          <div class="downloads-plain-metric-value">{completion_rate}</div>
+          <div class="downloads-plain-metric-label">review progress</div>
+        </div>
+      </div>
+      <div class="downloads-plain-section">
+        <div class="downloads-plain-section-title">In simple terms</div>
+        <div class="downloads-plain-copy">
+          We checked {total_records} record(s) and found {total_issues} issue(s). {status_line} {risk_line} {escalated_line}
+        </div>
+      </div>
+      <div class="downloads-plain-section">
+        <div class="downloads-plain-section-title">Main thing to know</div>
+        <div class="downloads-plain-copy">{issue_type_text}</div>
+        <div class="downloads-plain-copy">{top_issue_copy}</div>
+      </div>
+      <div class="downloads-plain-section">
+        <div class="downloads-plain-section-title">What to open next</div>
+        <div class="downloads-plain-copy">
+          Open <strong>Summary report</strong> if you want the headline outcome and review progress.
+          Open <strong>Issue details report</strong> if you need to see exactly which rows were flagged and what action is recommended.
+        </div>
+      </div>
+      {note_block}
+    </div>
+    """
+
+
 def _queue_to_records(review_queue_df: pd.DataFrame) -> list[dict]:
     return review_queue_df.to_dict(orient="records")
 

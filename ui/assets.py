@@ -264,8 +264,33 @@ def build_custom_css() -> str:
     .insight-card-status { border-left: 3px solid rgba(96, 165, 250, 0.72); }
     .insight-title { display: inline-flex; align-items: center; gap: 8px; color: var(--app-text-strong); font-size: .92rem; font-weight: 700; }
     .insight-body { margin-top: 12px; color: var(--app-text-muted); line-height: 1.55; }
+    .downloads-shell { margin-bottom: 16px; }
+    .downloads-hero { padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg, rgba(79, 70, 229, 0.16), rgba(14, 165, 233, 0.10)); border: 1px solid rgba(99, 102, 241, 0.2); box-shadow: var(--app-shadow-md); }
+    .downloads-kicker { text-transform: uppercase; letter-spacing: .08em; font-size: .74rem; color: var(--app-text-label); font-weight: 700; }
+    .downloads-title { margin-top: 8px; font-size: 1.28rem; font-weight: 700; color: var(--app-text-strong); }
+    .downloads-copy { margin-top: 10px; max-width: 820px; color: var(--app-text-muted); line-height: 1.6; }
+    .downloads-grid { gap: 14px; align-items: stretch; }
+    .download-card { background: var(--app-card-bg); border: 1px solid var(--app-border); border-radius: 18px; padding: 16px; box-shadow: var(--app-shadow-md); min-height: 100%; }
+    .download-card-primary { border-color: rgba(79, 70, 229, 0.28); box-shadow: 0 16px 28px rgba(79, 70, 229, 0.12); background: linear-gradient(180deg, rgba(99, 102, 241, 0.10), rgba(255, 255, 255, 0.02)); }
+    .download-card-copy { margin-bottom: 12px; }
+    .download-card-title { font-size: 1.02rem; font-weight: 700; color: var(--app-text-strong); }
+    .download-card-text { margin-top: 6px; color: var(--app-text-soft); line-height: 1.55; font-size: .94rem; }
+    .downloads-section-copy { margin: 0 0 14px; color: var(--app-text-soft); line-height: 1.55; }
+    .downloads-accordion { margin-top: 14px; }
+    .downloads-sub-accordion { margin-top: 12px; }
+    .downloads-plain-card { background: linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.88)); border: 1px solid rgba(96, 165, 250, 0.18); border-radius: 20px; padding: 20px; box-shadow: var(--app-shadow-md); }
+    .downloads-plain-kicker { text-transform: uppercase; letter-spacing: .08em; font-size: .72rem; color: var(--app-text-label); font-weight: 700; }
+    .downloads-plain-title { margin-top: 8px; font-size: 1.22rem; font-weight: 700; color: var(--app-text-strong); }
+    .downloads-plain-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .downloads-plain-metric { border-radius: 16px; padding: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(148, 163, 184, 0.12); }
+    .downloads-plain-metric-value { font-size: 1.5rem; font-weight: 700; color: var(--app-text-strong); }
+    .downloads-plain-metric-label { margin-top: 6px; color: var(--app-text-label); font-size: .85rem; line-height: 1.4; }
+    .downloads-plain-section { margin-top: 18px; }
+    .downloads-plain-section-title { font-size: .9rem; font-weight: 700; color: #93c5fd; margin-bottom: 8px; }
+    .downloads-plain-copy { color: var(--app-text-muted); line-height: 1.7; font-size: .97rem; max-width: 920px; }
+    .downloads-plain-note { margin-top: 18px; padding: 14px 16px; border-radius: 16px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.16); color: var(--app-text-muted); line-height: 1.6; }
     @media (max-width: 960px) {
-      .detail-grid, .insight-grid, .dashboard-kpi-grid, .metric-grid, .metric-strip { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+      .detail-grid, .insight-grid, .dashboard-kpi-grid, .metric-grid, .metric-strip, .downloads-plain-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
       .hero-row, .dashboard-title-row { flex-direction: column; }
       .reference-summary { flex-direction: column; align-items: flex-start; }
       .review-flow-panel { border-left: none; padding-left: 0; }
