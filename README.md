@@ -237,6 +237,16 @@ More deployment notes are in [docs/deployment.md](docs/deployment.md).
 - Shared Python core reused across source run, browser GUI, Docker demo, and Windows package
 - Optional AI interpretation based on compact findings snapshots rather than full spreadsheet upload by default
 
+## Version History
+
+The repository now exposes milestone-style versions so supervisors and reviewers can see how the prototype evolved:
+
+- `v0.1.0`: pipeline prototype baseline
+- `v0.2.0`: local review demo milestone
+- `v0.3.0`: current packaged evaluation demo milestone
+
+See [CHANGELOG.md](CHANGELOG.md) for the full milestone history and [docs/github_release_notes.md](docs/github_release_notes.md) for ready-to-paste GitHub Release descriptions.
+
 ## Project Scope
 
 ### In Scope

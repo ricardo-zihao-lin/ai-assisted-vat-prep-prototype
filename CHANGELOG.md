@@ -8,15 +8,16 @@ The project follows pre-`1.0.0` semantic versioning to reflect an academic proto
 
 ### Added
 
-- Contextual anomaly detection support to broaden review-signal coverage beyond basic deterministic validation.
+- Delivery-oriented GUI refinements, including a reorganized Downloads tab with recommended exports, advanced exports, and plain-language guidance.
 - Controlled VAT evaluation testbed generation and supporting evaluation artefacts for dissertation-aligned assessment.
-- Plain-language downloads guidance so exported outputs are easier to understand from a non-technical user perspective.
+- Contextual anomaly detection support to broaden review-signal coverage beyond basic deterministic validation.
 
 ### Changed
 
 - Refined the review dashboard and exporter outputs to better support review summaries, auditability, and downstream explanation.
-- Reworked the Downloads tab around recommended exports, advanced exports, and a human-readable overview panel.
+- Improved the Downloads experience so exported artefacts are presented as user tasks rather than a flat technical file list.
 - Tightened the optimization-phase evaluation story by documenting precision and recall improvements against the poisoned testbed.
+- Consolidated the current project state into a presentable dissertation demo milestone suitable for packaging and assessor walkthroughs.
 
 ### Fixed
 
@@ -29,24 +30,25 @@ The project follows pre-`1.0.0` semantic versioning to reflect an academic proto
 - Stronger evaluation narrative and more defensible review workflow presentation.
 - Cleaner user-facing downloads experience for assessors and demo users.
 
-## [0.2.0] - 2026-04-14
+## [0.2.0] - 2026-04-15
 
 ### Added
 
-- Delivery-oriented entry shells and packaging workflows for source run, local browser GUI, Docker, and Windows demo packaging.
+- A local browser UI for interactive prototype demonstration.
 - Review workflow improvements and a Visual Insights dashboard for run-level KPI and chart-based inspection.
-- Export review summaries to complement issue, log, and history artefacts.
+- Review summaries and aligned export artefacts to complement issue, log, and history outputs.
+- Public raw and adapted evaluation datasets to broaden prototype robustness testing.
 
 ### Changed
 
-- Aligned the VAT review workflow with clearer export outputs and more presentation-ready GUI structure.
-- Reorganized repository documentation and delivery notes to better support project review and demonstration.
+- Aligned the VAT review workflow with clearer export outputs and a more presentation-ready GUI structure.
+- Updated documentation to reflect the prototype workflow, review artefacts, and AI suggestion path.
 
 ### Release focus
 
-- First polished demonstration-oriented release.
-- Clearer end-to-end review flow from upload to exported review artefacts.
-- Better packaging and delivery story for non-developer reviewers.
+- First clearly demoable local review release.
+- Clearer end-to-end flow from upload to review and exported artefacts.
+- Stronger product shape for supervisors and assessors to inspect in the browser.
 
 ## [0.1.0] - 2026-03-22
 
@@ -54,11 +56,11 @@ The project follows pre-`1.0.0` semantic versioning to reflect an academic proto
 
 - Initial dissertation-aligned VAT review prototype structure.
 - Synthetic evaluation workflow and issue-chart support for early testing.
-- Reusable pipeline entry point and the first minimal local browser UI for prototype demonstration.
+- Early anomaly-analysis support for controlled cases.
 
 ### Changed
 
-- Updated repository documentation to reflect the prototype direction, AI suggestion workflow, and evaluation positioning.
+- Refactored orchestration into a reusable pipeline entry point for source runs and dissertation evaluation.
 
 ### Release focus
 
