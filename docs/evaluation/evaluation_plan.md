@@ -89,6 +89,10 @@ The evaluation should cover the following implemented components:
 - review-state updates
 - pre-submission review summary generation
 
+The unusual-transaction signal is intentionally implemented with IQR rather than a more complex machine-learning anomaly detector such as Isolation Forest. This keeps the flagged result explainable within a finance review workflow: a reviewer can be told that a value falls outside the observed interquartile spread, rather than being asked to trust a harder-to-interpret model score. That trade-off is important because the prototype is evaluated as a local-first, human-in-the-loop review tool, not as a black-box anomaly ranking engine.
+
+This choice also keeps the evaluation proportionate to the project scope. IQR can be reproduced locally with low computational overhead, no model-training stage, and limited tuning burden. More complex learned detectors may surface additional patterns, but they also introduce a higher risk of opaque flagging behaviour. In a financial review setting, that opacity weakens explainability and makes the resulting review prompt harder to justify to the user who must still make the final decision.
+
 The evaluation should not attempt to validate:
 
 - legal correctness in all VAT scenarios

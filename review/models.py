@@ -92,6 +92,7 @@ class Issue:
     expected_value: Any = None
     evidence_expected: str | None = None
     source_snapshot: dict[str, Any] | None = None
+    detection_scope: str | None = None
     is_resolved: bool = False
     created_by: str = "system"
     updated_at: str | None = None

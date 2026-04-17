@@ -48,6 +48,7 @@ class RunResult:
     review_log_path: str | None
     review_history_path: str | None
     review_summary_path: str | None
+    findings_summary_path: str | None
 
 
 def run_pipeline(input_path: str, output_dir: str) -> RunResult:
@@ -65,6 +66,7 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
 
     LOGGER.info("Starting VAT spreadsheet preparation pipeline for %s", resolved_input_path)
     raw_dataframe = load_spreadsheet(resolved_input_path)
+    LOGGER.info("Loaded %s rows from %s", len(raw_dataframe), resolved_input_path.name)
     preparation_result = prepare_input_dataframe(raw_dataframe)
 
     if preparation_result.status == PREPARATION_STATUS_UNSUPPORTED or preparation_result.prepared_dataframe is None:
@@ -99,13 +101,16 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
             review_log_path=None,
             review_history_path=None,
             review_summary_path=None,
+            findings_summary_path=None,
         )
 
     prepared_dataframe = preparation_result.prepared_dataframe
 
+    LOGGER.warning("Validation checks running...")
     validation_results = validate_vat_data(prepared_dataframe)
     LOGGER.info("Validation stage completed with %s issues", validation_results["issue_count"])
 
+    LOGGER.info("IQR anomaly detection running on net_amount...")
     anomaly_results = detect_anomalies(prepared_dataframe, column="net_amount", method="iqr")
     LOGGER.info("Anomaly detection stage completed with %s flagged rows", len(anomaly_results))
 
@@ -147,4 +152,5 @@ def run_pipeline(input_path: str, output_dir: str) -> RunResult:
         review_log_path=str(exported_files["review_log"]),
         review_history_path=str(exported_files["review_history"]),
         review_summary_path=str(exported_files["review_summary"]),
+        findings_summary_path=str(exported_files["findings_summary"]),
     )

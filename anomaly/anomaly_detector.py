@@ -7,8 +7,10 @@ the underlying financial entries are never altered automatically.
 """
 
 import logging
+from dataclasses import replace
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from review.issue_interpreter import RawIssueSignal, interpret_signal
@@ -18,6 +20,8 @@ LOGGER = logging.getLogger(__name__)
 EMPTY_ANOMALY_RESULT: list[Issue] = []
 MAX_ANOMALY_FLAGS = 50
 ANOMALY_RATIO_CAP = 0.02
+MIN_CONTEXTUAL_GROUP_SIZE = 4
+CONTEXT_COLUMNS = ("customer_supplier_id", "counterparty_ref")
 
 
 def _normalise_scalar(value: Any) -> Any:
@@ -38,6 +42,48 @@ def _build_source_snapshot(dataframe: pd.DataFrame, row_index: int) -> dict[str,
     return {column: _normalise_scalar(value) for column, value in row.items()}
 
 
+def _resolve_context_column(dataframe: pd.DataFrame) -> str | None:
+    for column in CONTEXT_COLUMNS:
+        if column in dataframe.columns:
+            return column
+    return None
+
+
+def _normalise_context_series(series: pd.Series) -> pd.Series:
+    """Normalise supplier-context values for grouping without mutating the source data."""
+    normalised = series.astype("string").str.strip()
+    return normalised.replace("", pd.NA)
+
+
+def _build_iqr_bounds(series: pd.Series) -> tuple[float, float]:
+    q1 = series.quantile(0.25)
+    q3 = series.quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - (1.5 * iqr)
+    upper_bound = q3 + (1.5 * iqr)
+    return float(lower_bound), float(upper_bound)
+
+
+def _build_review_message(
+    *,
+    observed_value: Any,
+    column: str,
+    detection_scope: str,
+    context_label: str | None,
+) -> str:
+    value_text = _normalise_scalar(observed_value)
+    scope_text = "contextual" if detection_scope == "contextual" else "global"
+    if context_label:
+        return (
+            f"The {column} value {value_text} is outside the {scope_text} IQR bounds for {context_label}. "
+            "Please compare it with the source record and supporting evidence to confirm whether it is legitimate."
+        )
+    return (
+        f"The {column} value {value_text} is outside the {scope_text} IQR bounds. "
+        "Please compare it with the source record and supporting evidence to confirm whether it is legitimate."
+    )
+
+
 def _build_anomaly_issue(
     dataframe: pd.DataFrame,
     row_index: int,
@@ -47,9 +93,17 @@ def _build_anomaly_issue(
     lower_bound: float,
     upper_bound: float,
     method: str,
+    detection_scope: str,
+    context_label: str | None = None,
 ) -> Issue:
     """Create one interpreted issue object for an unusual transaction."""
-    return interpret_signal(
+    message = _build_review_message(
+        observed_value=observed_value,
+        column=column,
+        detection_scope=detection_scope,
+        context_label=context_label,
+    )
+    issue = interpret_signal(
         RawIssueSignal(
             rule_id="VR015",
             row_index=row_index,
@@ -62,10 +116,24 @@ def _build_anomaly_issue(
                 "upper_bound": float(upper_bound),
                 "method": method,
                 "anomaly_score": float(anomaly_score),
+                "detection_scope": detection_scope,
+                "message": message,
+                "context_label": context_label,
             },
             evidence_expected="Invoice, receipt, or supporting transaction evidence",
             source_snapshot=_build_source_snapshot(dataframe, row_index),
         )
+    )
+    possible_vat_review_impact = (
+        "The amount is atypical for this supplier context and may need evidence-based confirmation before review is closed."
+        if detection_scope == "contextual"
+        else "The amount is unusual relative to the wider dataset and may need evidence-based confirmation before review is closed."
+    )
+    return replace(
+        issue,
+        detection_summary=message,
+        possible_vat_review_impact=possible_vat_review_impact,
+        detection_scope=detection_scope,
     )
 
 
@@ -132,27 +200,58 @@ def detect_anomalies(dataframe: pd.DataFrame, column: str = "net_amount", method
         suspicious_rows["reason"] = "Absolute z-score above 2.0"
         suspicious_rows["method"] = method
     else:
-        q1 = valid_rows[column].quantile(0.25)
-        q3 = valid_rows[column].quantile(0.75)
-        iqr = q3 - q1
-        lower_bound = q1 - (1.5 * iqr)
-        upper_bound = q3 + (1.5 * iqr)
+        global_lower_bound, global_upper_bound = _build_iqr_bounds(valid_rows[column])
+        context_column = _resolve_context_column(valid_rows)
 
-        # IQR bounds provide a robust rule-of-thumb for outlier screening in small datasets.
-        suspicious_rows = valid_rows[
-            (valid_rows[column] < lower_bound) | (valid_rows[column] > upper_bound)
-        ].copy()
+        effective_lower_bound = pd.Series(global_lower_bound, index=valid_rows.index, dtype="float64")
+        effective_upper_bound = pd.Series(global_upper_bound, index=valid_rows.index, dtype="float64")
+        detection_scope = pd.Series("global", index=valid_rows.index, dtype="object")
+        context_label = pd.Series([None] * len(valid_rows), index=valid_rows.index, dtype="object")
 
-        distance = pd.Series(0.0, index=suspicious_rows.index)
-        distance = distance.where(suspicious_rows[column] >= lower_bound, lower_bound - suspicious_rows[column])
-        distance = distance.where(suspicious_rows[column] <= upper_bound, suspicious_rows[column] - upper_bound)
+        if context_column is not None:
+            context_keys = _normalise_context_series(valid_rows[context_column])
+            context_present_mask = context_keys.notna()
+
+            contextual_rows = valid_rows.loc[context_present_mask, [column]].copy()
+            contextual_rows["_context_key"] = context_keys.loc[context_present_mask]
+            group_quantiles = contextual_rows.groupby("_context_key")[column].quantile([0.25, 0.75]).unstack()
+            contextual_group_sizes = context_keys.map(context_keys[context_present_mask].value_counts()).fillna(0).astype(int)
+
+            contextual_q1 = context_keys.map(group_quantiles[0.25]) if not group_quantiles.empty else pd.Series(index=valid_rows.index, dtype="float64")
+            contextual_q3 = context_keys.map(group_quantiles[0.75]) if not group_quantiles.empty else pd.Series(index=valid_rows.index, dtype="float64")
+            contextual_iqr = contextual_q3 - contextual_q1
+            contextual_lower = contextual_q1 - (1.5 * contextual_iqr)
+            contextual_upper = contextual_q3 + (1.5 * contextual_iqr)
+
+            contextual_eligible = context_present_mask & (contextual_group_sizes >= MIN_CONTEXTUAL_GROUP_SIZE)
+            effective_lower_bound.loc[contextual_eligible] = contextual_lower.loc[contextual_eligible]
+            effective_upper_bound.loc[contextual_eligible] = contextual_upper.loc[contextual_eligible]
+            detection_scope.loc[contextual_eligible] = "contextual"
+            context_label.loc[contextual_eligible] = (
+                context_column + "=" + context_keys.loc[contextual_eligible].astype("string")
+            )
+
+        anomaly_distance = np.where(
+            valid_rows[column] < effective_lower_bound,
+            effective_lower_bound - valid_rows[column],
+            np.where(valid_rows[column] > effective_upper_bound, valid_rows[column] - effective_upper_bound, 0.0),
+        )
+        suspicious_mask = anomaly_distance > 0
+
+        suspicious_rows = valid_rows.loc[suspicious_mask].copy()
         suspicious_rows["checked_column"] = column
         suspicious_rows["observed_value"] = suspicious_rows[column]
-        suspicious_rows["anomaly_score"] = distance.abs()
-        suspicious_rows["lower_bound"] = lower_bound
-        suspicious_rows["upper_bound"] = upper_bound
-        suspicious_rows["reason"] = "Outside IQR bounds"
+        suspicious_rows["anomaly_score"] = anomaly_distance[suspicious_mask]
+        suspicious_rows["lower_bound"] = effective_lower_bound.loc[suspicious_mask]
+        suspicious_rows["upper_bound"] = effective_upper_bound.loc[suspicious_mask]
+        suspicious_rows["reason"] = np.where(
+            detection_scope.loc[suspicious_mask].eq("contextual"),
+            "Outside contextual IQR bounds",
+            "Outside global IQR bounds",
+        )
         suspicious_rows["method"] = method
+        suspicious_rows["detection_scope"] = detection_scope.loc[suspicious_mask].to_numpy()
+        suspicious_rows["context_label"] = context_label.loc[suspicious_mask].to_numpy()
 
     if suspicious_rows.empty:
         LOGGER.info("No suspicious transactions detected for column %s", column)
@@ -181,6 +280,8 @@ def detect_anomalies(dataframe: pd.DataFrame, column: str = "net_amount", method
             lower_bound=float(row.lower_bound),
             upper_bound=float(row.upper_bound),
             method=str(row.method),
+            detection_scope=str(getattr(row, "detection_scope", "global")),
+            context_label=_normalise_scalar(getattr(row, "context_label", None)),
         )
         for row in suspicious_rows.itertuples(index=False)
     ]

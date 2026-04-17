@@ -8,21 +8,45 @@ The prototype is a review assistant. It is not an HMRC filing client, not a book
 
 ## Screenshots And Demo
 
-Add project screenshots or a short demo GIF here so visitors can see the review workflow before reading the technical sections.
+The current browser GUI is organized around a full review workflow rather than a single upload form.
 
-Suggested assets:
+### Demo Flow
 
-- `docs/images/gui-overview.png`: overall GUI view with upload area, summary, and findings list
-- `docs/images/review-centre.png`: dual-pane review workspace with issue context and decision controls
-- `docs/images/issue-report-example.png`: exported issue report or flagged findings example
-- `docs/images/demo-flow.gif`: short end-to-end flow from upload to saved review decision
+![Demo flow](docs/images/demo-flow.gif)
 
-Recommended placement order:
+### Key Screens
 
-1. GUI overview
-2. Example input or flagged findings
-3. Review Centre
-4. Demo GIF
+#### Welcome
+
+![Welcome page](docs/images/welcome-page.png)
+
+#### Upload And Run
+
+![Upload and Run page](docs/images/upload-and-run.png)
+
+#### Review Centre
+
+![Review Centre](docs/images/review-centre.png)
+
+#### Visual Insights
+
+![Visual Insights overview](docs/images/visual-insights-overview.png)
+
+![Visual Insights charts](docs/images/visual-insights-charts.png)
+
+#### Smart Assistant
+
+![Smart Assistant](docs/images/smart-assistant.png)
+
+#### Downloads
+
+![Downloads overview](docs/images/downloads-overview.png)
+
+![Downloads plain-language summary](docs/images/downloads-plain-language.png)
+
+#### Example Source Spreadsheet
+
+![Example source spreadsheet](docs/images/source-spreadsheet.png)
 
 ## What This Project Does
 
@@ -116,6 +140,30 @@ This repository does not claim validation on live HMRC systems or on authoritati
 - supplemental synthetic realism datasets for structure-oriented evaluation
 
 This separation is intentional. Different datasets support different claims, and the project avoids presenting synthetic or adapted data as real SME tax ground truth.
+
+For the controlled poisoning testbed, the project uses two public seed datasets:
+
+- Online Retail II as the sales or output VAT seed, giving UK retail transaction lines with real descriptions and cancellation-capable source records: [Kaggle mirror](https://www.kaggle.com/datasets/mathchi/online-retail-ii-data-set-from-ml-repository)
+- Purchase Ledger invoice data as the purchases or input VAT seed, giving enterprise-style procurement descriptions for semantic review and supplier-pattern checks: [Kaggle mirror](https://www.kaggle.com/datasets/nikhil1011/predict-product-category-from-given-invoice)
+
+The current controlled poisoning run produced 119 injected issues in total, recorded in `data/evaluation/poisoning_log.json`.
+
+Issue count summary:
+
+- `duplicate`: 8
+- `gross_inconsistency`: 18
+- `group_outlier_amount`: 5
+- `invalid_date_format`: 15
+- `invalid_numeric`: 15
+- `missing_value`: 24
+- `semantic_risk`: 10
+- `vat_math_inconsistency`: 24
+
+Optimization phase summary:
+
+- baseline row-level evaluation on the poisoned testbed: `Precision = 0.2265`, `Recall = 0.9550`
+- optimized row-level evaluation after fixing ISO date parsing and preserving `vat_code`: `Precision = 0.8846`, `Recall = 0.8288`
+- the main precision gain came from reducing false positives from `362` to `12`, especially by removing widespread `invalid_date_format` and `vat_rate_review_prompt` over-flagging on valid rows
 
 For provenance and evaluation context, see:
 
@@ -212,6 +260,16 @@ More deployment notes are in [docs/deployment.md](docs/deployment.md).
 - Local-first processing by default
 - Shared Python core reused across source run, browser GUI, Docker demo, and Windows package
 - Optional AI interpretation based on compact findings snapshots rather than full spreadsheet upload by default
+
+## Version History
+
+The repository now exposes milestone-style versions so supervisors and reviewers can see how the prototype evolved:
+
+- `v0.1.0`: pipeline prototype baseline
+- `v0.2.0`: local review demo milestone
+- `v0.3.0`: current packaged evaluation demo milestone
+
+See [CHANGELOG.md](CHANGELOG.md) for the full milestone history and [docs/github_release_notes.md](docs/github_release_notes.md) for ready-to-paste GitHub Release descriptions.
 
 ## Project Scope
 

@@ -23,7 +23,7 @@ from ai.prompts import DEFAULT_EDITABLE_EXPLANATION_PROMPT
 from ai.snapshot_builder import build_issue_snapshot
 from ai.suggestions_service import generate_advanced_ai_suggestions, try_generate_default_ai_suggestions
 from explanation.local_explainer import generate_automatic_explanation
-from export.exporter import ISSUE_REPORT_COLUMNS, export_review_summary
+from export.exporter import ISSUE_REPORT_COLUMNS, export_findings_summary, export_review_summary
 from pipeline import STATUS_UNSUPPORTED_INPUT, run_pipeline
 from review.review_manager import (
     REVIEW_DECISION_OPTIONS,
@@ -127,6 +127,7 @@ def run_analysis(
     review_log_df = read_output_csv(result.review_log_path, default_columns=REVIEW_LOG_COLUMNS)
     review_history_df = read_output_csv(result.review_history_path, default_columns=REVIEW_HISTORY_COLUMNS)
     review_summary_df = read_output_csv(result.review_summary_path)
+    findings_summary_df = read_output_csv(result.findings_summary_path)
     review_queue_df = build_review_queue(issue_report_df, review_log_df)
 
     if result.status == STATUS_UNSUPPORTED_INPUT:
@@ -157,6 +158,7 @@ def run_analysis(
         "review_log_path": result.review_log_path,
         "review_history_path": result.review_history_path,
         "review_summary_path": result.review_summary_path,
+        "findings_summary_path": result.findings_summary_path,
         "prepared_records_path": result.prepared_canonical_records_path,
         "source_filename": input_path.name,
     }
@@ -193,14 +195,14 @@ def run_analysis(
         ai_suggestions,
         ai_snapshot,
         *visual_bundle,
+        result.findings_summary_path,
         result.issue_report_path,
         result.review_log_path,
         result.review_history_path,
         result.review_summary_path,
         result.dataset_snapshot_path,
         result.prepared_canonical_records_path,
-        ui_rendering._build_issue_report_preview(issue_report_df),
-        ui_rendering._build_review_summary_preview(review_summary_df),
+        ui_rendering._build_downloads_plain_language_html(issue_report_df, review_summary_df),
         "All review states",
         "All finding types",
         "",
@@ -290,6 +292,14 @@ def save_review_decision(
             dataset_id=f"DATASET-{Path(review_paths['review_summary_path']).resolve().parent.name}",
             source_filename=review_paths.get("source_filename"),
         )
+    if review_paths.get("findings_summary_path"):
+        export_findings_summary(
+            issue_report_df,
+            prepared_records_df,
+            current_log_df,
+            review_paths["findings_summary_path"],
+            source_filename=review_paths.get("source_filename"),
+        )
     review_summary_df = read_output_csv(review_paths.get("review_summary_path"))
     refreshed_queue_df = build_review_queue(issue_report_df, current_log_df)
     review_workspace = ui_rendering._build_review_workspace(
@@ -311,6 +321,7 @@ def save_review_decision(
 
     return (
         "Review decision, notes, and evidence checked were saved to the current review log and appended to review history.",
+        review_paths["findings_summary_path"],
         review_paths["review_log_path"],
         review_paths["review_history_path"],
         review_paths["review_summary_path"],
@@ -318,7 +329,7 @@ def save_review_decision(
         *review_workspace,
         ui_rendering._queue_to_records(refreshed_queue_df),
         ui_rendering._queue_to_records(review_history_df),
-        ui_rendering._build_review_summary_preview(review_summary_df),
+        ui_rendering._build_downloads_plain_language_html(issue_report_df, review_summary_df),
     )
 
 
@@ -471,15 +482,121 @@ def build_interface() -> gr.Blocks:
                         advanced_generate_button = gr.Button("Regenerate AI advice", variant="secondary")
 
                 with gr.TabItem("Downloads"):
-                    with gr.Row():
-                        issue_report_file = gr.File(label="Issue report", interactive=False)
-                        review_log_file = gr.File(label="Review log", interactive=False)
-                        review_history_file = gr.File(label="Review history", interactive=False)
-                        review_summary_file = gr.File(label="Review summary", interactive=False)
-                        dataset_snapshot_file = gr.File(label="Dataset snapshot", interactive=False)
-                        prepared_canonical_records_file = gr.File(label="Prepared canonical records", interactive=False)
-                    issue_report_preview = gr.Dataframe(label="Explanation preview", interactive=False, max_height=420, wrap=True)
-                    review_summary_preview = gr.Dataframe(label="Review summary preview", interactive=False, max_height=180, wrap=True)
+                    gr.HTML(
+                        """
+                        <div class="downloads-shell">
+                          <div class="downloads-hero">
+                            <div class="downloads-kicker">Downloads</div>
+                            <div class="downloads-title">Choose the export that matches your next step</div>
+                            <div class="downloads-copy">
+                              Start with the summary if you need the headline result, or open the issue details report if you are following up flagged rows.
+                              Audit and raw-data exports are still available below for traceability and downstream processing.
+                            </div>
+                          </div>
+                        </div>
+                        """
+                    )
+                    gr.Markdown("### Recommended downloads")
+                    with gr.Row(elem_classes=["downloads-grid"]):
+                        with gr.Column(elem_classes=["download-card", "download-card-primary"]):
+                            gr.HTML(
+                                """
+                                <div class="download-card-copy">
+                                  <div class="download-card-title">Summary report</div>
+                                  <div class="download-card-text">
+                                    Best for a quick overview of issues found, unresolved risk, and review completion.
+                                  </div>
+                                </div>
+                                """
+                            )
+                            review_summary_file = gr.File(label="Download summary report", interactive=False)
+                        with gr.Column(elem_classes=["download-card"]):
+                            gr.HTML(
+                                """
+                                <div class="download-card-copy">
+                                  <div class="download-card-title">Issue details report</div>
+                                  <div class="download-card-text">
+                                    Best for investigating flagged rows, understanding why they matter, and sharing next actions.
+                                  </div>
+                                </div>
+                                """
+                            )
+                            issue_report_file = gr.File(label="Download issue details report", interactive=False)
+                    with gr.Accordion("Advanced exports", open=False, elem_classes="secondary-accordion downloads-accordion"):
+                        gr.HTML(
+                            """
+                            <div class="downloads-section-copy">
+                              These exports support audit traceability, downstream processing, and technical review history.
+                            </div>
+                            """
+                        )
+                        with gr.Row(elem_classes=["downloads-grid"]):
+                            with gr.Column(elem_classes=["download-card"]):
+                                gr.HTML(
+                                    """
+                                    <div class="download-card-copy">
+                                      <div class="download-card-title">Standardized records</div>
+                                      <div class="download-card-text">
+                                        Cleaned and prepared records for downstream analysis or handoff.
+                                      </div>
+                                    </div>
+                                    """
+                                )
+                                prepared_canonical_records_file = gr.File(label="Download standardized records", interactive=False)
+                            with gr.Column(elem_classes=["download-card"]):
+                                gr.HTML(
+                                    """
+                                    <div class="download-card-copy">
+                                      <div class="download-card-title">Source data snapshot</div>
+                                      <div class="download-card-text">
+                                        A saved copy of the processed source dataset for audit traceability.
+                                      </div>
+                                    </div>
+                                    """
+                                )
+                                dataset_snapshot_file = gr.File(label="Download source data snapshot", interactive=False)
+                        with gr.Row(elem_classes=["downloads-grid"]):
+                            with gr.Column(elem_classes=["download-card"]):
+                                gr.HTML(
+                                    """
+                                    <div class="download-card-copy">
+                                      <div class="download-card-title">Findings summary table</div>
+                                      <div class="download-card-text">
+                                        Compact metrics and section totals for lightweight reporting.
+                                      </div>
+                                    </div>
+                                    """
+                                )
+                                findings_summary_file = gr.File(label="Download findings summary table", interactive=False)
+                            with gr.Column(elem_classes=["download-card"]):
+                                gr.HTML(
+                                    """
+                                    <div class="download-card-copy">
+                                      <div class="download-card-title">Review activity history</div>
+                                      <div class="download-card-text">
+                                        Reviewer decisions saved over time, useful when you need an audit trail of actions taken.
+                                      </div>
+                                    </div>
+                                    """
+                                )
+                                review_history_file = gr.File(label="Download review activity history", interactive=False)
+                        with gr.Row(elem_classes=["downloads-grid"]):
+                            with gr.Column(elem_classes=["download-card"]):
+                                gr.HTML(
+                                    """
+                                    <div class="download-card-copy">
+                                      <div class="download-card-title">Validation log</div>
+                                      <div class="download-card-text">
+                                        Technical run output for troubleshooting or detailed validation review.
+                                      </div>
+                                    </div>
+                                    """
+                                )
+                                review_log_file = gr.File(label="Download validation log", interactive=False)
+                    with gr.Accordion("Preview before downloading", open=True, elem_classes="secondary-accordion downloads-accordion"):
+                        downloads_plain_language_html = gr.HTML(
+                            ui_rendering._build_downloads_plain_language_html(pd.DataFrame(), pd.DataFrame())
+                        )
 
         ai_snapshot_state = gr.State(value=None)
         review_queue_state = gr.State(value=[])
@@ -502,14 +619,14 @@ def build_interface() -> gr.Blocks:
                 anomaly_amount_plot,
                 priority_findings_preview,
                 anomaly_note_output,
+                findings_summary_file,
                 issue_report_file,
                 review_log_file,
                 review_history_file,
                 review_summary_file,
                 dataset_snapshot_file,
                 prepared_canonical_records_file,
-                issue_report_preview,
-                review_summary_preview,
+                downloads_plain_language_html,
                 status_filter_input,
                 type_filter_input,
                 search_text_input,
@@ -556,6 +673,7 @@ def build_interface() -> gr.Blocks:
             inputs=[issue_selector, decision_input, evidence_checked_input, review_notes_input, status_filter_input, type_filter_input, search_text_input, review_queue_state, review_paths_state],
             outputs=[
                 review_save_feedback,
+                findings_summary_file,
                 review_log_file,
                 review_history_file,
                 review_summary_file,
@@ -581,7 +699,7 @@ def build_interface() -> gr.Blocks:
                 review_history_preview,
                 review_queue_state,
                 review_history_state,
-                review_summary_preview,
+                downloads_plain_language_html,
             ],
         )
 

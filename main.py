@@ -6,6 +6,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from logging_utils import configure_logging
 from pipeline import run_pipeline
 
 LOGGER = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ def _build_parser(base_dir: Path) -> argparse.ArgumentParser:
 
 def _print_run_summary(result) -> None:
     """Print a stable, human-readable summary for source runs."""
-    print("VAT Spreadsheet Preparation Prototype")
+    print("Run summary")
     print(f"Input file: {result.input_file}")
     print(f"Rows loaded: {result.rows_loaded}")
     print(f"Preparation status: {result.preparation_status}")
@@ -58,6 +59,7 @@ def _print_run_summary(result) -> None:
     print(f"review_log: {result.review_log_path}")
     print(f"review_history: {result.review_history_path}")
     print(f"review_summary: {result.review_summary_path}")
+    print(f"findings_summary: {result.findings_summary_path}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -66,10 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser(base_dir)
     args = parser.parse_args(argv)
 
-    logging.basicConfig(
-        level=getattr(logging, args.log_level),
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    )
+    configure_logging(args.log_level)
 
     input_path = args.input.resolve()
     output_dir = args.output_dir.resolve()
@@ -79,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
 
     LOGGER.info("Running source pipeline entry for %s", input_path)
     result = run_pipeline(str(input_path), str(output_dir))
+    LOGGER.success("issue_report.csv generated at %s", result.issue_report_path)
     _print_run_summary(result)
     return 0
 

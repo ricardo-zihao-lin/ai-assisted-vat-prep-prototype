@@ -112,3 +112,47 @@ The evaluation story is now consistent across the write-up and the artefacts:
 
 This is a stronger dissertation position than presenting raw detection counts
 alone, because it ties together correctness, usefulness, and reproducibility.
+
+## 6. Controlled Poisoning Optimization Phase
+
+The repository now also includes a controlled poisoning benchmark built from
+public seed transaction data and a ground-truth poisoning log.
+
+The baseline row-level evaluation on
+`data/evaluation/evaluation_testbed_poisoned.csv` produced:
+
+- `TP = 106`
+- `FP = 362`
+- `FN = 5`
+- `Precision = 0.2265`
+- `Recall = 0.9550`
+
+The main false-positive sources were:
+
+- `invalid_date_format`, where valid ISO dates were over-flagged by mixed-format parsing
+- `vat_rate_review_prompt`, where valid zero-rated or exempt rows were over-flagged because `vat_code` was not preserved into the canonical pipeline
+
+After the optimization pass, the pipeline was updated to:
+
+- parse ISO `YYYY-MM-DD` dates explicitly before any fallback parsing
+- preserve `vat_code` in the prepared canonical schema
+- suppress VAT review prompts when the declared `vat_code` and observed amount ratio are already consistent
+- treat `vat_code` as optional review context rather than a universally mandatory completeness field, which avoids spurious missing-field findings in datasets that do not carry tax-code columns
+
+The optimized row-level evaluation then produced:
+
+- `TP = 92`
+- `FP = 12`
+- `FN = 19`
+- `Precision = 0.8846`
+- `Recall = 0.8288`
+
+This supports the following dissertation-ready statement:
+
+- `Precision_baseline = 0.22 -> Precision_optimized = 0.8846`
+
+Interpretation:
+
+- the optimization phase substantially improved precision by removing large volumes of rule-induced false positives
+- the trade-off was a reduction in recall, mainly because advisory semantic-risk rows and partial-date strings were no longer being captured as aggressively
+- this makes the post-optimization pipeline a stronger candidate for traceable pre-submission review, where reviewer trust and lower false-positive burden matter

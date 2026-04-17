@@ -65,6 +65,7 @@ DOWNLOAD_PREVIEW_COLUMNS = [
     "suggested_action",
     "review_note",
 ]
+FINDINGS_SUMMARY_PREVIEW_COLUMNS = ["section", "metric", "value", "note"]
 REVIEW_CONTEXT_COLUMNS = [
     "date",
     "invoice_reference",
