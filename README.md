@@ -2,13 +2,13 @@
 
 > A local-first prototype for UK VAT spreadsheet review, combining deterministic checks, anomaly flagging, explanation-oriented review support, and human decision logging.
 
-This repository contains an undergraduate Final Year Project prototype for reviewing spreadsheet-based VAT records before submission. It is designed for CSV or Excel workflows where a user needs help spotting likely issues, understanding why a record matters, and recording a human review decision against flagged items.
+This repository contains an undergraduate Final Year Project prototype for reviewing spreadsheet-based VAT records before submission. It is aimed at CSV or Excel workflows where a user needs help identifying likely issues, understanding why a record matters, and recording a traceable human review decision.
 
-The prototype is a review assistant. It is not an HMRC filing client, not a bookkeeping platform, and not a replacement for professional tax judgement.
+The prototype is a review assistant, not an HMRC filing client, bookkeeping platform, or substitute for professional tax judgement.
 
 ## Screenshots And Demo
 
-The current browser GUI is organized around a full review workflow rather than a single upload form.
+The browser GUI is organized around a complete review workflow rather than a single upload form.
 
 ### Demo Flow
 
@@ -52,7 +52,7 @@ The current browser GUI is organized around a full review workflow rather than a
 
 The system takes spreadsheet-style transaction records, maps them into a canonical review structure, runs deterministic validation plus bounded anomaly checks, and exports review artefacts such as issue reports, review logs, and summaries.
 
-In practice, it is intended to answer questions like:
+At a practical level, it is designed to answer questions like:
 
 - Which records need manual attention before VAT submission?
 - Which findings are deterministic data problems versus review signals?
@@ -70,18 +70,14 @@ In practice, it is intended to answer questions like:
 | Best fit for | Spreadsheet-using SMEs, bookkeepers, students, and project reviewers |
 | Not designed for | VAT filing, legal advice, or automated compliance sign-off |
 
-## Who It Is For
-
-- Small businesses or spreadsheet-based finance workflows that need a structured pre-submission review step
-- Bookkeepers or project reviewers who want flagged records plus traceable human decisions
-- Students, supervisors, and assessors reviewing the prototype as an undergraduate Final Year Project
-
-## Why It Is Useful
+## Why It Matters
 
 - It turns spreadsheet checking into a review workflow instead of a one-off error list.
 - It combines deterministic checks with anomaly-style screening so that attention is directed toward likely review points.
 - It explains findings in review language rather than only reporting technical errors.
 - It keeps the reviewer in control by recording decisions instead of silently rewriting records.
+
+This makes it most relevant for spreadsheet-based finance workflows, bookkeepers, and academic reviewers assessing the prototype as a supervised Final Year Project.
 
 ## Example Input Shape
 
@@ -111,7 +107,7 @@ Typical outputs include:
 - `review_summary.csv`
 - diagnostic outputs when required fields are missing
 
-In practice, these outputs are meant to answer:
+Together, these outputs are meant to answer:
 
 - which records were flagged and why
 - which findings are deterministic issues versus review prompts
