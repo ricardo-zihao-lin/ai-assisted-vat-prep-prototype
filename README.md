@@ -48,6 +48,14 @@ The browser GUI is organized around a complete review workflow rather than a sin
 
 ![Example source spreadsheet](docs/images/source-spreadsheet.png)
 
+## Architecture
+
+The prototype is organized as a local-first review pipeline that prepares spreadsheet VAT records for inspection, explanation, human review, and export.
+
+![High-level system architecture](docs/images/architecture/architecture-overview.png)
+
+For a more detailed layered view of the modules, orchestration flow, and generated review artefacts, see [architecture.md](architecture.md).
+
 ## What This Project Does
 
 The system takes spreadsheet-style transaction records, maps them into a canonical review structure, runs deterministic validation plus bounded anomaly checks, and exports review artefacts such as issue reports, review logs, and summaries.
