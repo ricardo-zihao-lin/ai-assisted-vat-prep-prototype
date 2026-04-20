@@ -7,17 +7,33 @@ introducing opaque automated corrections.
 """
 
 import logging
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import pandas as pd
 
 from review.issue_interpreter import RawIssueSignal, interpret_signal
-from review.models import Issue
+from review.models import (
+    DeterminismType,
+    Issue,
+    IssueStatus,
+    ReviewState,
+    RiskLevel,
+    build_issue_id,
+    build_record_id,
+    utc_now_iso,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 EXPECTED_COLUMNS = ["date", "description", "net_amount", "vat_amount"]
 NUMERIC_COLUMNS = ["net_amount", "vat_amount"]
+VAT_RATE_STANDARD = Decimal("0.20")
+VAT_RATE_ALTERNATIVES = (Decimal("0.05"), Decimal("0.00"))
+VAT_RATE_TOLERANCE = Decimal("0.01")
+MIN_NET_THRESHOLD = Decimal("1.00")
+VAT_RATE_RULE_ID = "VR021"
+ISO_DATE_PATTERN = r"\d{4}-\d{2}-\d{2}"
 
 
 def _column_has_any_non_missing(dataframe: pd.DataFrame, column: str) -> bool:
@@ -47,6 +63,224 @@ def _normalise_scalar(value: Any) -> Any:
         except ValueError:
             return value
     return value
+
+
+def _to_decimal_exact(value: Any) -> Decimal | None:
+    """Convert a numeric-looking value to Decimal without inheriting float noise."""
+    if value is None or pd.isna(value):
+        return None
+
+    if isinstance(value, Decimal):
+        return abs(value)
+
+    try:
+        return abs(Decimal(str(value).strip()))
+    except (InvalidOperation, AttributeError, ValueError):
+        return None
+
+
+def _format_rate(rate: Decimal) -> str:
+    """Render a rate as a compact percentage string for review text."""
+    percentage = (rate * Decimal("100")).normalize()
+    if percentage == percentage.to_integral():
+        return f"{int(percentage)}%"
+    formatted = format(percentage.quantize(Decimal("0.01")), "f").rstrip("0").rstrip(".")
+    return f"{formatted}%"
+
+
+def _normalise_vat_code(value: Any) -> str | None:
+    """Normalise VAT code labels into a compact uppercase token."""
+    if value is None or pd.isna(value):
+        return None
+    token = str(value).strip().upper()
+    return token or None
+
+
+def _parse_transaction_dates(date_values: pd.Series) -> pd.Series:
+    """Parse ISO dates first, then fall back to day-first parsing for non-ISO strings."""
+    parsed_dates = pd.Series(pd.NaT, index=date_values.index, dtype="datetime64[ns]")
+    if pd.api.types.is_string_dtype(date_values) or date_values.dtype == "object":
+        text_values = date_values.astype("string").str.strip()
+    else:
+        text_values = date_values.astype("string")
+
+    iso_mask = text_values.str.fullmatch(ISO_DATE_PATTERN, na=False)
+    if iso_mask.any():
+        parsed_dates.loc[iso_mask] = pd.to_datetime(
+            text_values.loc[iso_mask],
+            format="%Y-%m-%d",
+            errors="coerce",
+        )
+
+    fallback_mask = ~iso_mask & text_values.notna() & text_values.ne("")
+    if fallback_mask.any():
+        parsed_dates.loc[fallback_mask] = pd.to_datetime(
+            text_values.loc[fallback_mask],
+            errors="coerce",
+            dayfirst=True,
+        )
+
+    return parsed_dates
+
+
+def _rate_matches(observed_rate: Decimal, target_rate: Decimal) -> bool:
+    return abs(observed_rate - target_rate) <= VAT_RATE_TOLERANCE
+
+
+def _build_tax_rate_issue(
+    dataframe: pd.DataFrame,
+    row_index: int,
+    *,
+    detected_rate: Decimal,
+    matched_rate: Decimal | None,
+    issue_type: str,
+    status: IssueStatus,
+    risk_level: RiskLevel,
+    determinism_type: DeterminismType,
+    detection_summary: str,
+    why_it_matters: str,
+    recommended_manual_check: str,
+    possible_vat_review_impact: str | None = None,
+) -> Issue:
+    """Create a direct Issue object for VAT-rate review outcomes."""
+    source_snapshot = _build_source_snapshot(dataframe, row_index)
+    net_value = _normalise_scalar(dataframe.at[row_index, "net_amount"]) if row_index in dataframe.index else None
+    vat_value = _normalise_scalar(dataframe.at[row_index, "vat_amount"]) if row_index in dataframe.index else None
+
+    expected_value: dict[str, Any] = {
+        "standard_rate": float(VAT_RATE_STANDARD),
+        "tolerance": float(VAT_RATE_TOLERANCE),
+        "observed_rate": float(detected_rate),
+        "allowed_rates": [float(VAT_RATE_STANDARD), *[float(rate) for rate in VAT_RATE_ALTERNATIVES]],
+    }
+    if matched_rate is not None:
+        expected_value["matched_rate"] = float(matched_rate)
+        expected_value["match_band"] = _format_rate(matched_rate)
+
+    return Issue(
+        issue_id=build_issue_id(VAT_RATE_RULE_ID, row_index, ("net_amount", "vat_amount")),
+        rule_id=VAT_RATE_RULE_ID,
+        record_id=build_record_id(row_index),
+        issue_type=issue_type,
+        category="VAT rate review",
+        status=status,
+        risk_level=risk_level,
+        determinism_type=determinism_type,
+        detection_summary=detection_summary,
+        why_it_matters=why_it_matters,
+        possible_vat_review_impact=possible_vat_review_impact or why_it_matters,
+        recommended_manual_check=recommended_manual_check,
+        review_state=ReviewState.OPEN,
+        detected_at=utc_now_iso(),
+        row_index=row_index,
+        field_names=("net_amount", "vat_amount"),
+        detected_value={
+            "net_amount": net_value,
+            "vat_amount": vat_value,
+            "observed_rate": float(detected_rate),
+        },
+        expected_value=expected_value,
+        evidence_expected="Invoice, receipt, or supporting VAT evidence",
+        source_snapshot=source_snapshot,
+    )
+
+
+def _detect_vat_rate_issue(dataframe: pd.DataFrame, row_index: int, net_amount: Any, vat_amount: Any) -> Issue | None:
+    """Return a VAT-rate issue when the observed rate does not fit the heuristic bands."""
+    net_decimal = _to_decimal_exact(net_amount)
+    vat_decimal = _to_decimal_exact(vat_amount)
+    if net_decimal is None or vat_decimal is None:
+        return None
+
+    if net_decimal < MIN_NET_THRESHOLD:
+        return None
+
+    if net_decimal == 0:
+        return None
+
+    observed_rate = vat_decimal / net_decimal
+    declared_vat_code = _normalise_vat_code(dataframe.at[row_index, "vat_code"]) if "vat_code" in dataframe.columns else None
+
+    if declared_vat_code in {"SR", "STANDARD", "STANDARD_RATE"} and _rate_matches(observed_rate, VAT_RATE_STANDARD):
+        return None
+    if declared_vat_code in {"ZR", "ZERO", "ZERO_RATE", "ZERO_RATED", "EXEMPT"} and _rate_matches(
+        observed_rate,
+        Decimal("0.00"),
+    ):
+        return None
+    if declared_vat_code in {"RR", "REDUCED", "REDUCED_RATE", "REDUCED_RATED"} and _rate_matches(
+        observed_rate,
+        Decimal("0.05"),
+    ):
+        return None
+
+    if _rate_matches(observed_rate, VAT_RATE_STANDARD):
+        return None
+
+    for alternative_rate in VAT_RATE_ALTERNATIVES:
+        if _rate_matches(observed_rate, alternative_rate):
+            observed_rate_text = _format_rate(observed_rate)
+            matched_rate_text = _format_rate(alternative_rate)
+            detection_summary = (
+                f"The transaction tax rate is {observed_rate_text}, which is not the 20% standard rate. "
+                f"It is close to the {matched_rate_text} band and should be manually confirmed."
+            )
+            why_it_matters = (
+                f"The VAT amount is arithmetically plausible, but the record appears to use a {matched_rate_text} "
+                "treatment that may require business-specific justification."
+            )
+            recommended_manual_check = (
+                f"Check the source invoice, contract, or VAT treatment note to confirm whether the {matched_rate_text} "
+                "rate is applicable."
+            )
+            return _build_tax_rate_issue(
+                dataframe,
+                row_index,
+                detected_rate=observed_rate,
+                matched_rate=alternative_rate,
+                issue_type="vat_rate_review_prompt",
+                status=IssueStatus.REVIEW_REQUIRED,
+                risk_level=RiskLevel.MEDIUM,
+                determinism_type=DeterminismType.PARTLY_DETERMINISTIC,
+                detection_summary=detection_summary,
+                why_it_matters=why_it_matters,
+                recommended_manual_check=recommended_manual_check,
+                possible_vat_review_impact=(
+                    "The amount can still be valid, but the selected VAT treatment should be confirmed against the source evidence."
+                ),
+            )
+
+    observed_rate_text = _format_rate(observed_rate)
+    allowed_rates_text = ", ".join(_format_rate(rate) for rate in (VAT_RATE_STANDARD, *VAT_RATE_ALTERNATIVES))
+    detection_summary = (
+        f"The transaction tax rate is {observed_rate_text}, which does not match the standard or fallback VAT bands."
+    )
+    why_it_matters = (
+        "The VAT ratio is not consistent with the prototype's baseline tax-rate heuristic, so the row may contain a "
+        "calculation error or an unsupported VAT treatment."
+    )
+    recommended_manual_check = (
+        "Recalculate the VAT treatment from the source evidence and confirm whether the entry should be corrected or "
+        "documented as a special case."
+    )
+    issue = _build_tax_rate_issue(
+        dataframe,
+        row_index,
+        detected_rate=observed_rate,
+        matched_rate=None,
+        issue_type="math_inconsistent",
+        status=IssueStatus.NON_COMPLIANT,
+        risk_level=RiskLevel.HIGH,
+        determinism_type=DeterminismType.DETERMINISTIC,
+        detection_summary=detection_summary,
+        why_it_matters=why_it_matters,
+        recommended_manual_check=recommended_manual_check,
+        possible_vat_review_impact=(
+            "The VAT ratio is outside the supported heuristic bands and should be treated as a probable calculation or treatment error."
+        ),
+    )
+    issue.expected_value["allowed_rates_text"] = allowed_rates_text
+    return issue
 
 
 def _build_source_snapshot(dataframe: pd.DataFrame, row_index: int) -> dict[str, Any] | None:
@@ -334,6 +568,25 @@ def validate_vat_data(dataframe: pd.DataFrame) -> dict:
                             log_message="Missing value detected at row %s, column %s",
                             log_args=(row_index, column),
                         )
+                elif column == "vat_code":
+                    if _optional_review_column_enabled(dataframe, "vat_code"):
+                        append_issue(
+                            interpret_signal(
+                                _build_signal(
+                                    dataframe,
+                                    row_index,
+                                    column,
+                                    "missing_required_review_field",
+                                    dataframe.at[row_index, column],
+                                    rule_id="VR017",
+                                    category="Digital record completeness",
+                                    expected_value="A VAT code where the dataset uses one for review support.",
+                                    evidence_expected="Source spreadsheet or supporting transaction evidence",
+                                )
+                            ),
+                            log_message="Missing value detected at row %s, column %s",
+                            log_args=(row_index, column),
+                        )
                 else:
                     append_issue(
                         interpret_signal(
@@ -378,10 +631,7 @@ def validate_vat_data(dataframe: pd.DataFrame) -> dict:
     # aligned with the prototype's spreadsheet-oriented workflow.
     if "date" in dataframe.columns:
         date_values = dataframe["date"]
-        if pd.api.types.is_string_dtype(date_values) or date_values.dtype == "object":
-            date_values = date_values.astype("string").str.strip()
-
-        parsed_dates = pd.to_datetime(date_values, errors="coerce", dayfirst=True)
+        parsed_dates = _parse_transaction_dates(date_values)
         invalid_date_mask = ~dataframe["date"].apply(_is_missing_cell) & parsed_dates.isna()
         invalid_date_indices = list(dataframe.index[invalid_date_mask])
         if invalid_date_indices:
@@ -439,6 +689,25 @@ def validate_vat_data(dataframe: pd.DataFrame) -> dict:
                     )
                 )
             )
+
+    if "net_amount" in parsed_numeric_columns and "vat_amount" in parsed_numeric_columns:
+        net_amounts = parsed_numeric_columns["net_amount"]
+        vat_amounts = parsed_numeric_columns["vat_amount"]
+        vat_rate_mask = net_amounts.notna() & vat_amounts.notna()
+        if vat_rate_mask.any():
+            for row_index in dataframe.index[vat_rate_mask]:
+                tax_rate_issue = _detect_vat_rate_issue(
+                    dataframe,
+                    int(row_index),
+                    dataframe.at[row_index, "net_amount"],
+                    dataframe.at[row_index, "vat_amount"],
+                )
+                if tax_rate_issue is not None:
+                    append_issue(
+                        tax_rate_issue,
+                        log_message="VAT rate check produced a review item at row %s",
+                        log_args=(row_index,),
+                    )
 
     if "net_amount" in parsed_numeric_columns:
         net_amounts = parsed_numeric_columns["net_amount"]

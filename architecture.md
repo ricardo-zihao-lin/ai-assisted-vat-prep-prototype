@@ -1,5 +1,9 @@
 # System Architecture
 
+The following figure gives a detailed view of the prototype's layered structure, showing how the browser GUI, orchestration entry points, core processing modules, and exported review artefacts fit together.
+
+![Detailed modular architecture](docs/images/architecture/architecture-modular-detail.png)
+
 ## 5.1 Architectural Overview
 
 The prototype follows a modular pipeline architecture for preparing spreadsheet-based VAT records prior to submission-related activities. This structure reflects the practical workflow of small-business record preparation, where data is first loaded from a spreadsheet source, then checked for quality problems, examined for unusual transactions, reviewed by a human user, and finally exported as a set of supporting output files. The overall flow can therefore be described as Data Ingestion, Data Validation, Anomaly Detection, Human Review, and Export.

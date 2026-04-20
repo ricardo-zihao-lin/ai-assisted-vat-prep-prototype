@@ -2,33 +2,65 @@
 
 > A local-first prototype for UK VAT spreadsheet review, combining deterministic checks, anomaly flagging, explanation-oriented review support, and human decision logging.
 
-This repository contains an undergraduate Final Year Project prototype for reviewing spreadsheet-based VAT records before submission. It is designed for CSV or Excel workflows where a user needs help spotting likely issues, understanding why a record matters, and recording a human review decision against flagged items.
+This repository contains an undergraduate Final Year Project prototype for reviewing spreadsheet-based VAT records before submission. It is aimed at CSV or Excel workflows where a user needs help identifying likely issues, understanding why a record matters, and recording a traceable human review decision.
 
-The prototype is a review assistant. It is not an HMRC filing client, not a bookkeeping platform, and not a replacement for professional tax judgement.
+The prototype is a review assistant, not an HMRC filing client, bookkeeping platform, or substitute for professional tax judgement.
 
 ## Screenshots And Demo
 
-Add project screenshots or a short demo GIF here so visitors can see the review workflow before reading the technical sections.
+The browser GUI is organized around a complete review workflow rather than a single upload form.
 
-Suggested assets:
+### Demo Flow
 
-- `docs/images/gui-overview.png`: overall GUI view with upload area, summary, and findings list
-- `docs/images/review-centre.png`: dual-pane review workspace with issue context and decision controls
-- `docs/images/issue-report-example.png`: exported issue report or flagged findings example
-- `docs/images/demo-flow.gif`: short end-to-end flow from upload to saved review decision
+![Demo flow](docs/images/demo-flow.gif)
 
-Recommended placement order:
+### Key Screens
 
-1. GUI overview
-2. Example input or flagged findings
-3. Review Centre
-4. Demo GIF
+#### Welcome
+
+![Welcome page](docs/images/welcome-page.png)
+
+#### Upload And Run
+
+![Upload and Run page](docs/images/upload-and-run.png)
+
+#### Review Centre
+
+![Review Centre](docs/images/review-centre.png)
+
+#### Visual Insights
+
+![Visual Insights overview](docs/images/visual-insights-overview.png)
+
+![Visual Insights charts](docs/images/visual-insights-charts.png)
+
+#### Smart Assistant
+
+![Smart Assistant](docs/images/smart-assistant.png)
+
+#### Downloads
+
+![Downloads overview](docs/images/downloads-overview.png)
+
+![Downloads plain-language summary](docs/images/downloads-plain-language.png)
+
+#### Example Source Spreadsheet
+
+![Example source spreadsheet](docs/images/source-spreadsheet.png)
+
+## Architecture
+
+The prototype is organized as a local-first review pipeline that prepares spreadsheet VAT records for inspection, explanation, human review, and export.
+
+![High-level system architecture](docs/images/architecture/architecture-overview.png)
+
+For a more detailed layered view of the modules, orchestration flow, and generated review artefacts, see [architecture.md](architecture.md).
 
 ## What This Project Does
 
 The system takes spreadsheet-style transaction records, maps them into a canonical review structure, runs deterministic validation plus bounded anomaly checks, and exports review artefacts such as issue reports, review logs, and summaries.
 
-In practice, it is intended to answer questions like:
+At a practical level, it is designed to answer questions like:
 
 - Which records need manual attention before VAT submission?
 - Which findings are deterministic data problems versus review signals?
@@ -46,18 +78,14 @@ In practice, it is intended to answer questions like:
 | Best fit for | Spreadsheet-using SMEs, bookkeepers, students, and project reviewers |
 | Not designed for | VAT filing, legal advice, or automated compliance sign-off |
 
-## Who It Is For
-
-- Small businesses or spreadsheet-based finance workflows that need a structured pre-submission review step
-- Bookkeepers or project reviewers who want flagged records plus traceable human decisions
-- Students, supervisors, and assessors reviewing the prototype as an undergraduate Final Year Project
-
-## Why It Is Useful
+## Why It Matters
 
 - It turns spreadsheet checking into a review workflow instead of a one-off error list.
 - It combines deterministic checks with anomaly-style screening so that attention is directed toward likely review points.
 - It explains findings in review language rather than only reporting technical errors.
 - It keeps the reviewer in control by recording decisions instead of silently rewriting records.
+
+This makes it most relevant for spreadsheet-based finance workflows, bookkeepers, and academic reviewers assessing the prototype as a supervised Final Year Project.
 
 ## Example Input Shape
 
@@ -87,7 +115,7 @@ Typical outputs include:
 - `review_summary.csv`
 - diagnostic outputs when required fields are missing
 
-In practice, these outputs are meant to answer:
+Together, these outputs are meant to answer:
 
 - which records were flagged and why
 - which findings are deterministic issues versus review prompts
@@ -134,6 +162,12 @@ Issue count summary:
 - `missing_value`: 24
 - `semantic_risk`: 10
 - `vat_math_inconsistency`: 24
+
+Optimization phase summary:
+
+- baseline row-level evaluation on the poisoned testbed: `Precision = 0.2265`, `Recall = 0.9550`
+- optimized row-level evaluation after fixing ISO date parsing and preserving `vat_code`: `Precision = 0.8846`, `Recall = 0.8288`
+- the main precision gain came from reducing false positives from `362` to `12`, especially by removing widespread `invalid_date_format` and `vat_rate_review_prompt` over-flagging on valid rows
 
 For provenance and evaluation context, see:
 
@@ -230,6 +264,16 @@ More deployment notes are in [docs/deployment.md](docs/deployment.md).
 - Local-first processing by default
 - Shared Python core reused across source run, browser GUI, Docker demo, and Windows package
 - Optional AI interpretation based on compact findings snapshots rather than full spreadsheet upload by default
+
+## Version History
+
+The repository now exposes milestone-style versions so supervisors and reviewers can see how the prototype evolved:
+
+- `v0.1.0`: pipeline prototype baseline
+- `v0.2.0`: local review demo milestone
+- `v0.3.0`: current packaged evaluation demo milestone
+
+See [CHANGELOG.md](CHANGELOG.md) for the full milestone history and [docs/github_release_notes.md](docs/github_release_notes.md) for ready-to-paste GitHub Release descriptions.
 
 ## Project Scope
 

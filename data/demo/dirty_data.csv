@@ -1,0 +1,11 @@
+date,description,net_amount,vat_amount,category
+2026-02-01,Office supplies,120.00,24.00,Office
+2026-02-03,Client invoice,980.00,196.00,Sales
+2026-02-05,Travel expense,65.50,13.10,Travel
+Q1/2025,Equipment purchase,750.00,150.00,Equipment
+2026-02-08,Software subscription,45.00,9.00,Software
+2026-02-10,Stationery top-up,110.00,22.00,Office
+2026-02-11,Cash sale,95.00,19.00,Sales
+2026-02-12,Consulting project,18500.00,3700.00,Sales
+2026-02-13,Team lunch,88.40,17.68,Hospitality
+2026-02-14,Printer paper,132.00,26.40,Office

@@ -59,6 +59,14 @@ The prototype follows three principles:
 3. Traceable throughout
    The system should preserve a clear trail from detected issue to review outcome.
 
+## Anomaly Detection Position
+
+The prototype uses a bounded IQR-based check for unusual `net_amount` values rather than a more complex machine-learning anomaly model such as Isolation Forest.
+
+This is a deliberate design choice, not a missing feature. In a VAT review setting, the project needs to explain to a reviewer why a record was surfaced and what should be checked next. An IQR threshold can be described in plain review language: the value sits outside the expected spread of the observed data and should therefore be reviewed. That level of explainability is easier to defend in a dissertation, easier to audit in a finance context, and easier for a human reviewer to challenge or confirm.
+
+The same choice also supports the local-first operating model. IQR can run with minimal computational overhead, no model training step, no parameter-heavy tuning process, and no dependency on external compute services. More complex machine-learning detectors may sometimes identify additional unusual patterns, but they introduce a higher risk of opaque flagging behaviour. In a financial review workflow, that opacity is a practical and governance concern because users may be asked to trust a flag without being given a sufficiently transparent reason.
+
 ## Working Status Model
 
 Flagged records should be represented using a bounded review status model:

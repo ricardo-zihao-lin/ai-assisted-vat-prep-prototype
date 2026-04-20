@@ -1,0 +1,22 @@
+Missed Cases (False Negatives)
+========================================
+
+record_id=REC-00140 | row_index=139 | poison_type=invalid_date_format
+record_id=REC-00072 | row_index=71 | poison_type=invalid_date_format
+record_id=REC-00274 | row_index=273 | poison_type=invalid_date_format
+record_id=REC-00290 | row_index=289 | poison_type=invalid_date_format
+record_id=REC-00502 | row_index=501 | poison_type=invalid_date_format
+record_id=REC-DUP-0002 | row_index=601 | poison_type=duplicate
+record_id=REC-DUP-0004 | row_index=603 | poison_type=duplicate
+record_id=REC-DUP-0006 | row_index=605 | poison_type=duplicate
+record_id=REC-DUP-0008 | row_index=607 | poison_type=duplicate
+record_id=REC-00336 | row_index=335 | poison_type=group_outlier_amount
+record_id=REC-00573 | row_index=572 | poison_type=semantic_risk
+record_id=REC-00537 | row_index=536 | poison_type=semantic_risk
+record_id=REC-00498 | row_index=497 | poison_type=semantic_risk
+record_id=REC-00561 | row_index=560 | poison_type=semantic_risk
+record_id=REC-00584 | row_index=583 | poison_type=semantic_risk
+record_id=REC-00595 | row_index=594 | poison_type=semantic_risk
+record_id=REC-00525 | row_index=524 | poison_type=semantic_risk
+record_id=REC-00539 | row_index=538 | poison_type=semantic_risk
+record_id=REC-00410 | row_index=409 | poison_type=semantic_risk
